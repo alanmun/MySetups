@@ -4,6 +4,7 @@ AutoHotKey scripts that I use
 In short:
 
 BetterKeys is for laptops (Includes brightness changes which are useless on desktops)
+
 BeterKeysMediaOnly is for desktops
 
 To make sure the scripts go off automatically (anytime you restart your computer you will normally have to execute the scripts again):
