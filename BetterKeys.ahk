@@ -217,10 +217,10 @@ BrightnessSetter_new() {
 BS := new BrightnessSetter()
 
 ;;	Brightness Keys
-;;Map Brightness Up to F6
-F6::BS.SetBrightness(10)
 ;;Map Brightness Down to F5
 F5::BS.SetBrightness(-10)
+;;Map Brightness Up to F6
+F6::BS.SetBrightness(10)
 
 ;;	Media Keys
 ;; Map Pause/Break to Previous
@@ -236,6 +236,18 @@ F10::Send {Volume_Mute}
 F11::Send {Volume_Down}
 ;; Map F12 to Volume Up
 F12::Send {Volume_Up}
+
+;;	Shift rebind (since media keys are rebound, we need to tell Shift+F10 to actually perform F10)
+;;Map Shift+F5 to F5
++F5::F5
+;;Map Shift+F6 to F6
++F6::F6
+;;Map Shift+F10 to F10
++F10::F10
+;;Map Shift+F11 to F11
++F11::F11
+;;Map Shift+F12 to F12
++F12::F12
 
 ;;Unused
 ;; Map F9 to Stop
