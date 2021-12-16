@@ -16,5 +16,7 @@ To make sure the scripts go off automatically (anytime you restart your computer
 	Type "shell:startup" and hit enter. You will be taken to a startup folder.
 	
 	Drag and drop the shortcut you made into this startup folder.
+	
+	If above doesn't work, try "shell:common startup"
 
 To use original function keys (F5, F6, F10, F11, F12 are rebound) you now use them by holding shift and pressing them. So to F5 (like for refreshing a page on your browser) you need to do Shift+F5, because F5 lowers brightness.
