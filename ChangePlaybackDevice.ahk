@@ -1,3 +1,4 @@
+#SingleInstance force
 
 ^!F9::
     Run, mmsys.cpl
