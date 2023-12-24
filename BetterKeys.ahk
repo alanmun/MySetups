@@ -1,5 +1,7 @@
 ;; Virtual Media Keys And Brightness Keys Simplified
 
+#SingleInstance Force
+
 ;;Necessary Code To Handle Brightness
 class BrightnessSetter {
 	; qwerty12 - 27/05/17
