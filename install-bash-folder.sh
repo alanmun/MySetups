@@ -22,7 +22,9 @@ backup_file() {
   local backup
   local timestamp
 
-  [ -f "$original" ] || return 0
+  if [ ! -e "$original" ] && [ ! -L "$original" ]; then
+    return 0
+  fi
 
   backup="${original}.BAK"
   if [ -e "$backup" ]; then
@@ -30,7 +32,7 @@ backup_file() {
     backup="${original}.BAK.${timestamp}"
   fi
 
-  cp -p "$original" "$backup"
+  mv "$original" "$backup"
   echo "Backed up existing file: $original -> $backup"
 }
 
@@ -38,7 +40,12 @@ while IFS= read -r -d '' rel_path; do
   src_file="$src_dir/$rel_path"
   dest_file="$target_home/$rel_path"
   mkdir -p "$(dirname "$dest_file")"
-  if [ -f "$dest_file" ] && ! cmp -s "$src_file" "$dest_file"; then
+
+  # Always replace symlinks at the destination path; this avoids writing through
+  # stale or dangling links (common in MSYS2 home setups).
+  if [ -L "$dest_file" ]; then
+    backup_file "$dest_file"
+  elif [ -f "$dest_file" ] && ! cmp -s "$src_file" "$dest_file"; then
     backup_file "$dest_file"
   fi
   cp -f "$src_file" "$dest_file"
