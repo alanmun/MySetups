@@ -1,22 +1,36 @@
-# AHKDama
-AutoHotKey scripts that I use
+# MySetups
+Personal setup repo for:
+- AutoHotkey scripts
+- Shared Bash environment config (Debian RPi, WSL2 Ubuntu, MSYS2 UCRT64 on Windows)
 
+## AutoHotkey Notes
 In short:
+- `BetterKeys.ahk` is for laptops (includes brightness changes).
+- `BetterKeysMediaOnly.ahk` is for desktops.
 
-BetterKeys is for laptops (Includes brightness changes which are useless on desktops)
+To auto-start a script on Windows:
+1. Find your script, right-click it, then select "Create Shortcut".
+2. Press `Win + R`.
+3. Run `shell:startup`.
+4. Drag and drop the shortcut into that startup folder.
+5. If needed, try `shell:common startup` instead.
 
-BeterKeysMediaOnly is for desktops
+To use original function keys (`F5`, `F6`, `F10`, `F11`, `F12`) that are rebound, hold `Shift` while pressing them.
 
-To make sure the scripts go off automatically (anytime you restart your computer you will normally have to execute the scripts again):
+## Shared Bash Folder
+Common environment files live under `bash/` and are installed by running:
 
-	Find where your script is, right click, select "Create Shortcut".
-	
-	Hold Windows key + R
-	
-	Type "shell:startup" and hit enter. You will be taken to a startup folder.
-	
-	Drag and drop the shortcut you made into this startup folder.
-	
-	If above doesn't work, try "shell:common startup"
+```bash
+bash ./install-bash-folder.sh
+```
 
-To use original function keys (F5, F6, F10, F11, F12 are rebound) you now use them by holding shift and pressing them. So to F5 (like for refreshing a page on your browser) you need to do Shift+F5, because F5 lowers brightness.
+What the installer currently does:
+- Copies every file from repo `bash/` into your target home (default: `~`), preserving paths.
+- Backs up an existing target file to `.BAK` (or `.BAK.<timestamp>` if `.BAK` already exists) before overwrite.
+- Does not delete unrelated existing files in the target home.
+- This is a straight file copy, so `bash/.bashrc` installs to `~/.bashrc`, `bash/.vimrc` to `~/.vimrc`, etc.
+
+Current files in `bash/` include:
+- `bash/.bashrc`
+- `bash/.vimrc`
+- `bash/.tmux.conf`
