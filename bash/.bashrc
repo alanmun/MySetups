@@ -87,10 +87,119 @@ if $is_msys2; then
 fi
 
 # -------------------------
-# Linux / WSL only
+# Ubuntu Linux / WSL only
 # -------------------------
 if $is_linux && ! $is_msys2; then
-  : # : == pass in python
+  # If not running interactively, stop here for Linux shells
+  case $- in
+    *i*) ;;
+    *) return ;;
+  esac
+
+  # History / shell behavior
+  HISTCONTROL=ignoreboth
+  shopt -s histappend
+  shopt -s checkwinsize
+  HISTSIZE=1000
+  HISTFILESIZE=2000
+
+  # lesspipe
+  [ -x /usr/bin/lesspipe ] && eval "$(SHELL=/bin/sh lesspipe)"
+
+  # Debian chroot marker for prompt
+  if [ -z "${debian_chroot:-}" ] && [ -r /etc/debian_chroot ]; then
+    debian_chroot="$(cat /etc/debian_chroot)"
+  fi
+
+  # Color support for prompt
+  case "$TERM" in
+    xterm-color|*-256color) color_prompt=yes ;;
+  esac
+
+  if [ "${color_prompt:-}" = yes ]; then
+    PS1='${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '
+  else
+    PS1='${debian_chroot:+($debian_chroot)}\u@\h:\w\$ '
+  fi
+  unset color_prompt
+
+  # Set terminal title for xterm-like terminals
+  case "$TERM" in
+    xterm*|rxvt*)
+      PS1="\[\e]0;${debian_chroot:+($debian_chroot)}\u@\h: \w\a\]$PS1"
+      ;;
+  esac
+
+  # dircolors
+  if [ -x /usr/bin/dircolors ]; then
+    test -r ~/.dircolors && eval "$(dircolors -b ~/.dircolors)" || eval "$(dircolors -b)"
+  fi
+
+  # Aliases that used to exist in Ubuntu bashrc
+  alias fgrep='fgrep --color=auto'
+  alias egrep='egrep --color=auto'
+  alias ll='ls -alF'
+  alias la='ls -A'
+  alias l='ls -CF'
+
+  # Handy function from old bashrc
+  c() { cd "$@" && ls; }
+
+  # User-local bins
+  export PATH="$HOME/.local/bin:$PATH"
+
+  # Python alias from old config
+  alias python="/usr/bin/python3"
+
+  # Go
+  export PATH="/usr/local/go/bin:$PATH"
+
+  # Linuxbrew
+  if [ -x /home/linuxbrew/.linuxbrew/bin/brew ]; then
+    eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+  fi
+
+  # nvm (Linux-side only)
+  export NVM_DIR="$HOME/.nvm"
+  [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+  [ -s "$NVM_DIR/bash_completion" ] && . "$NVM_DIR/bash_completion"
+
+  # WSL integration
+  export BROWSER="wslview"
+  export XDG_CONFIG_HOME="$HOME/.config"
+  export EDITOR="code --wait"
+
+  # bun
+  export BUN_INSTALL="$HOME/.bun"
+  [ -d "$BUN_INSTALL/bin" ] && export PATH="$BUN_INSTALL/bin:$PATH"
+
+  # rust/cargo
+  [ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
+
+  # opencode
+  export PATH="$HOME/.opencode/bin:$PATH"
+
+  # bash aliases file
+  if [ -f ~/.bash_aliases ]; then
+    . ~/.bash_aliases
+  fi
+
+  # bash completion
+  if ! shopt -oq posix; then
+    if [ -f /usr/share/bash-completion/bash_completion ]; then
+      . /usr/share/bash-completion/bash_completion
+    elif [ -f /etc/bash_completion ]; then
+      . /etc/bash_completion
+    fi
+  fi
+
+  # # Remove Windows Node/npm paths from WSL PATH so Linux tools stay Linux-native
+  # PATH="$(printf '%s' "$PATH" | awk -v RS=: -v ORS=: '
+  #   !/\/mnt\/c\/.*AppData\/Roaming\/nvm/ &&
+  #   !/\/mnt\/c\/.*\/nodejs/ &&
+  #   !/\/mnt\/c\/nvm4w\/nodejs/ { print }
+  # ' | sed 's/:$//')"
+  # export PATH
 fi
 
 # -------------------------
