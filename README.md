@@ -25,10 +25,16 @@ bash ./install-bash-folder.sh
 ```
 
 What the installer currently does:
-- Copies every file from repo `bash/` into your target home (default: `~`), preserving paths.
-- Backs up an existing target file to `.BAK` (or `.BAK.<timestamp>` if `.BAK` already exists) before overwrite.
+- Symlinks every file from repo `bash/` into your target home (default: `~`), preserving paths.
+- Backs up an existing target file to `.BAK` (or `.BAK.<timestamp>` if `.BAK` already exists) before relinking.
 - Does not delete unrelated existing files in the target home.
-- This is a straight file copy, so `bash/.bashrc` installs to `~/.bashrc`, `bash/.vimrc` to `~/.vimrc`, etc.
+- Because the target files are symlinked, pulling new changes in this repo updates `~/.bashrc`, `~/.vimrc`, `~/.tmux.conf`, etc. automatically.
+
+If you still want the old copy behavior for a one-off install, run:
+
+```bash
+MYSETUPS_INSTALL_MODE=copy bash ./install-bash-folder.sh
+```
 
 Current files in `bash/` include:
 - `bash/.bashrc`
