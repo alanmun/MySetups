@@ -1,4 +1,12 @@
-#!/usr/bin/env bash
+# ~/.bashrc: executed by bash(1) for non-login interactive shells.
+
+# -------------------------
+# Interactive shells only
+# -------------------------
+case $- in
+  *i*) ;;
+  *) return ;;
+esac
 
 # -------------------------
 # Environment detection
@@ -25,22 +33,30 @@ if [ -f /proc/device-tree/model ] && grep -qi "Raspberry Pi" /proc/device-tree/m
 fi
 
 # -------------------------
-# Global (everywhere)
+# Global interactive settings
 # -------------------------
+HISTCONTROL=ignoreboth
+shopt -s histappend
+HISTSIZE=1000
+HISTFILESIZE=2000
+shopt -s checkwinsize
+
 export UV_ENV_FILE=".env"
+export LESS='-R'
 
 alias withenv='dotenv -e .env --'
 alias uvshell='source .venv/bin/activate'
 
-alias gita='git add .'
-alias gitb='git branch -a --sort=-committerdate'
+alias gita='git add -A'
 alias gits='git status'
 alias gitp='git push'
 
-alias ls='ls --color=auto'
-alias grep='grep --color=auto'
-alias tree='tree -C'
-export LESS='-R'
+gitb() {
+  git for-each-ref \
+    --sort=-committerdate \
+    --format='%(if)%(HEAD)%(then)* %(else)  %(end)%(refname:short)  %(committerdate:relative)' \
+    refs/heads | less -R
+}
 
 # -------------------------
 # MSYS2 only
@@ -48,11 +64,19 @@ export LESS='-R'
 if $is_msys2; then
   export MSYS2_PATH_TYPE=append
 
-  # Together these are intended to fix escape sequences from mouse events from spamming the terminal when connection dies during ssh + tmux usage
+  alias ls='ls --color=auto'
+  alias grep='grep --color=auto'
+
+  if command -v tree >/dev/null 2>&1; then
+    alias tree='tree -C'
+  fi
+
+  # Fixes leaked terminal mouse/alt-screen modes after ssh exits badly under tmux
   fix_terminal_leak() {
-  printf '\e[?1000l\e[?1002l\e[?1003l\e[?1006l\e[?1015l\e[?2004l\e[?1049l'
-  stty sane 2>/dev/null || true
+    printf '\e[?1000l\e[?1002l\e[?1003l\e[?1006l\e[?1015l\e[?2004l\e[?1049l'
+    stty sane 2>/dev/null || true
   }
+
   ssh() {
     command ssh "$@"
     local rc=$?
@@ -69,7 +93,8 @@ if $is_msys2; then
       cygpath -u "$@"
     }
 
-    alias uvshell='source .venv/Scripts/activate' # Need to override because we are technically in Windows env
+    # Override because venv activation path differs on Windows
+    alias uvshell='source .venv/Scripts/activate'
 
     export PATH="$PATH:/c/Users/Alan/AppData/Local/Programs/Microsoft VS Code/bin"
     export PATH="$PATH:$(linpath 'C:\Users\Alan\AppData\Local\Programs\Python\Python312\')"
@@ -90,12 +115,29 @@ fi
 # Linux / WSL only
 # -------------------------
 if $is_linux && ! $is_msys2; then
-  : # : == pass in python
+  export PATH="$HOME/.local/bin:$PATH"
+
+  alias ls='ls --color=auto'
+  alias grep='grep --color=auto'
+
+  if command -v tree >/dev/null 2>&1; then
+    alias tree='tree -C'
+  fi
+
+  if ! shopt -oq posix; then
+    if [ -f /usr/share/bash-completion/bash_completion ]; then
+      . /usr/share/bash-completion/bash_completion
+    elif [ -f /etc/bash_completion ]; then
+      . /etc/bash_completion
+    fi
+  fi
 fi
 
 # -------------------------
 # Raspberry Pi only
 # -------------------------
 if $is_rpi; then
-  :
+  export NVM_DIR="$HOME/.nvm"
+  [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+  [ -s "$NVM_DIR/bash_completion" ] && . "$NVM_DIR/bash_completion"
 fi
