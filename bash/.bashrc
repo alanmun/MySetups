@@ -50,13 +50,7 @@ alias uvshell='source .venv/bin/activate'
 alias gita='git add -A'
 alias gits='git status'
 alias gitp='git push'
-
-gitb() {
-  git for-each-ref \
-    --sort=-committerdate \
-    --format='%(if)%(HEAD)%(then)* %(else)  %(end)%(refname:short)  %(committerdate:relative)' \
-    refs/heads | less -R
-}
+alias gitb='git for-each-ref --sort=-committerdate --format="%(if)%(HEAD)%(then)* %(else)  %(end)%(refname:short)  %(committerdate:relative)" refs/heads | less -R'
 
 # -------------------------
 # MSYS2 only
