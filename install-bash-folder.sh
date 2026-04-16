@@ -10,6 +10,7 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 src_dir="$script_dir/bash"
 target_home="${MYSETUPS_TARGET_HOME:-$HOME}"
 install_mode="${MYSETUPS_INSTALL_MODE:-symlink}"
+install_tmux_tpm="${MYSETUPS_INSTALL_TMUX_TPM:-1}"
 
 if [ ! -d "$src_dir" ]; then
   echo "Expected source folder missing: $src_dir" >&2
@@ -22,6 +23,16 @@ case "$install_mode" in
   *)
     echo "Unsupported install mode: $install_mode" >&2
     echo "Use MYSETUPS_INSTALL_MODE=symlink or MYSETUPS_INSTALL_MODE=copy" >&2
+    exit 1
+    ;;
+esac
+
+case "$install_tmux_tpm" in
+  0|1)
+    ;;
+  *)
+    echo "Unsupported MYSETUPS_INSTALL_TMUX_TPM value: $install_tmux_tpm" >&2
+    echo "Use MYSETUPS_INSTALL_TMUX_TPM=1 to install/update TPM or 0 to skip it" >&2
     exit 1
     ;;
 esac
@@ -45,6 +56,34 @@ backup_file() {
 
   mv "$original" "$backup"
   echo "Backed up existing file: $original -> $backup"
+}
+
+install_tmux_plugin_manager() {
+  local tmux_dir="$target_home/.tmux"
+  local plugins_dir="$tmux_dir/plugins"
+  local tpm_dir="$plugins_dir/tpm"
+  local tpm_repo="https://github.com/tmux-plugins/tpm"
+
+  if [ "$install_tmux_tpm" != "1" ]; then
+    echo "Skipping TPM install because MYSETUPS_INSTALL_TMUX_TPM=0"
+    return 0
+  fi
+
+  mkdir -p "$plugins_dir"
+
+  if [ -d "$tpm_dir/.git" ]; then
+    git -C "$tpm_dir" pull --ff-only
+    echo "Updated TPM in $tpm_dir"
+    return 0
+  fi
+
+  if [ -e "$tpm_dir" ]; then
+    echo "Cannot install TPM because path exists and is not a git checkout: $tpm_dir" >&2
+    return 1
+  fi
+
+  git clone "$tpm_repo" "$tpm_dir"
+  echo "Installed TPM into $tpm_dir"
 }
 
 while IFS= read -r -d '' rel_path; do
@@ -84,3 +123,5 @@ else
   echo "Installed files from $src_dir into target home: $target_home"
   echo "Existing files were backed up to *.BAK before overwrite."
 fi
+
+install_tmux_plugin_manager

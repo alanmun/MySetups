@@ -27,6 +27,7 @@ bash ./install-bash-folder.sh
 What the installer currently does:
 - Symlinks every file from repo `bash/` into your target home (default: `~`), preserving paths.
 - Backs up an existing target file to `.BAK` (or `.BAK.<timestamp>` if `.BAK` already exists) before relinking.
+- Installs or updates the tmux plugin manager at `~/.tmux/plugins/tpm` so tmux plugins referenced from `bash/.tmux.conf` work on each machine.
 - Does not delete unrelated existing files in the target home.
 - Because the target files are symlinked, pulling new changes in this repo updates `~/.bashrc`, `~/.vimrc`, `~/.tmux.conf`, etc. automatically.
 
@@ -34,6 +35,12 @@ If you still want the old copy behavior for a one-off install, run:
 
 ```bash
 MYSETUPS_INSTALL_MODE=copy bash ./install-bash-folder.sh
+```
+
+If you want to skip TPM installation or update during bootstrap, run:
+
+```bash
+MYSETUPS_INSTALL_TMUX_TPM=0 bash ./install-bash-folder.sh
 ```
 
 Current files in `bash/` include:
