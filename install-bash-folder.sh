@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Install shared shell config files into a target home directory and ensure tmux
+# persistence plugins are present. Safe to re-run: existing files are left in
+# place when already correct, and tmux plugin checkouts are updated in place.
+
 if [ -z "${BASH_VERSION:-}" ]; then
   echo "This installer must be run with bash." >&2
   exit 1
@@ -11,6 +15,7 @@ src_dir="$script_dir/bash"
 target_home="${MYSETUPS_TARGET_HOME:-$HOME}"
 install_mode="${MYSETUPS_INSTALL_MODE:-symlink}"
 install_tmux_tpm="${MYSETUPS_INSTALL_TMUX_TPM:-1}"
+install_tmux_plugins="${MYSETUPS_INSTALL_TMUX_PLUGINS:-1}"
 
 if [ ! -d "$src_dir" ]; then
   echo "Expected source folder missing: $src_dir" >&2
@@ -33,6 +38,16 @@ case "$install_tmux_tpm" in
   *)
     echo "Unsupported MYSETUPS_INSTALL_TMUX_TPM value: $install_tmux_tpm" >&2
     echo "Use MYSETUPS_INSTALL_TMUX_TPM=1 to install/update TPM or 0 to skip it" >&2
+    exit 1
+    ;;
+esac
+
+case "$install_tmux_plugins" in
+  0|1)
+    ;;
+  *)
+    echo "Unsupported MYSETUPS_INSTALL_TMUX_PLUGINS value: $install_tmux_plugins" >&2
+    echo "Use MYSETUPS_INSTALL_TMUX_PLUGINS=1 to install/update tmux plugins or 0 to skip it" >&2
     exit 1
     ;;
 esac
@@ -86,6 +101,71 @@ install_tmux_plugin_manager() {
   echo "Installed TPM into $tpm_dir"
 }
 
+github_remote_matches_slug() {
+  local remote_url="$1"
+  local plugin_slug="$2"
+
+  case "$remote_url" in
+    "https://github.com/$plugin_slug"|\
+    "https://github.com/$plugin_slug.git"|\
+    "git@github.com:$plugin_slug"|\
+    "git@github.com:$plugin_slug.git"|\
+    "ssh://git@github.com/$plugin_slug"|\
+    "ssh://git@github.com/$plugin_slug.git")
+      return 0
+      ;;
+  esac
+
+  return 1
+}
+
+install_or_update_tmux_plugin() {
+  local plugin_slug="$1"
+  local plugins_dir="$target_home/.tmux/plugins"
+  local plugin_name="${plugin_slug##*/}"
+  local plugin_dir="$plugins_dir/$plugin_name"
+  local plugin_repo="https://github.com/$plugin_slug.git"
+  local current_remote
+
+  mkdir -p "$plugins_dir"
+
+  if [ -d "$plugin_dir/.git" ]; then
+    current_remote="$(git -C "$plugin_dir" remote get-url origin 2>/dev/null || true)"
+    if [ -z "$current_remote" ]; then
+      echo "Cannot update $plugin_name because origin remote is missing: $plugin_dir" >&2
+      return 1
+    fi
+
+    if ! github_remote_matches_slug "$current_remote" "$plugin_slug"; then
+      echo "Cannot update $plugin_name because origin remote is unexpected: $current_remote" >&2
+      return 1
+    fi
+
+    git -C "$plugin_dir" pull --ff-only --recurse-submodules
+    git -C "$plugin_dir" submodule update --init --recursive
+    echo "Updated tmux plugin $plugin_name in $plugin_dir"
+    return 0
+  fi
+
+  if [ -e "$plugin_dir" ]; then
+    echo "Cannot install $plugin_name because path exists and is not a git checkout: $plugin_dir" >&2
+    return 1
+  fi
+
+  git clone --recursive "$plugin_repo" "$plugin_dir"
+  echo "Installed tmux plugin $plugin_name into $plugin_dir"
+}
+
+install_tmux_persistence_plugins() {
+  if [ "$install_tmux_plugins" != "1" ]; then
+    echo "Skipping tmux plugin install because MYSETUPS_INSTALL_TMUX_PLUGINS=0"
+    return 0
+  fi
+
+  install_or_update_tmux_plugin "tmux-plugins/tmux-resurrect"
+  install_or_update_tmux_plugin "tmux-plugins/tmux-continuum"
+}
+
 while IFS= read -r -d '' rel_path; do
   src_file="$src_dir/$rel_path"
   dest_file="$target_home/$rel_path"
@@ -125,3 +205,4 @@ else
 fi
 
 install_tmux_plugin_manager
+install_tmux_persistence_plugins
