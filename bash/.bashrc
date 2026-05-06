@@ -37,9 +37,17 @@ fi
 # -------------------------
 HISTCONTROL=ignoreboth
 shopt -s histappend
-HISTSIZE=1000
-HISTFILESIZE=2000
+HISTSIZE=50000
+HISTFILESIZE=100000
 shopt -s checkwinsize
+
+history_sync_command='history -a'
+case "${PROMPT_COMMAND:-}" in
+  *"history -a"*) ;;
+  "") PROMPT_COMMAND="$history_sync_command" ;;
+  *) PROMPT_COMMAND="$history_sync_command; $PROMPT_COMMAND" ;;
+esac
+unset history_sync_command
 
 export UV_ENV_FILE=".env"
 export LESS='-R'
@@ -119,8 +127,8 @@ if $is_linux && ! $is_msys2; then
   HISTCONTROL=ignoreboth
   shopt -s histappend
   shopt -s checkwinsize
-  HISTSIZE=1000
-  HISTFILESIZE=2000
+  HISTSIZE=50000
+  HISTFILESIZE=100000
 
   # lesspipe
   [ -x /usr/bin/lesspipe ] && eval "$(SHELL=/bin/sh lesspipe)"

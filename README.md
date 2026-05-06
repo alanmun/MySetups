@@ -54,3 +54,6 @@ Current files in `bash/` include:
 - `bash/.bashrc`
 - `bash/.vimrc`
 - `bash/.tmux.conf`
+- `bash/.config/nvim/init.lua`
+
+The Neovim config installs to `~/.config/nvim/init.lua`, which Neovim picks up by default on Linux, WSL, and MSYS2. On a machine running Windows-native Neovim (outside MSYS2), point it at this same file by setting `XDG_CONFIG_HOME` to `%USERPROFILE%\.config` or junctioning `%LOCALAPPDATA%\nvim` to `%USERPROFILE%\.config\nvim`.
