@@ -2,6 +2,13 @@
 Personal setup repo for:
 - AutoHotkey scripts
 - Shared Bash environment config (Debian RPi, WSL2 Ubuntu, MSYS2 UCRT64 on Windows)
+- Shared agent skills for Codex and Claude Code
+
+Run the full setup with:
+
+```bash
+bash ./install.sh
+```
 
 ## AutoHotkey Notes
 In short:
@@ -18,7 +25,7 @@ To auto-start a script on Windows:
 To use original function keys (`F5`, `F6`, `F10`, `F11`, `F12`) that are rebound, hold `Shift` while pressing them.
 
 ## Shared Bash Folder
-Common environment files live under `bash/` and are installed by running:
+Common environment files live under `bash/` and can be installed separately by running:
 
 ```bash
 bash ./install-bash-folder.sh
@@ -57,3 +64,34 @@ Current files in `bash/` include:
 - `bash/.config/nvim/init.lua`
 
 The Neovim config installs to `~/.config/nvim/init.lua`, which Neovim picks up by default on Linux, WSL, and MSYS2. On a machine running Windows-native Neovim (outside MSYS2), point it at this same file by setting `XDG_CONFIG_HOME` to `%USERPROFILE%\.config` or junctioning `%LOCALAPPDATA%\nvim` to `%USERPROFILE%\.config\nvim`.
+
+## Shared Agent Skills
+Personal, non-project-specific agent skills live under `agent-skills/` and can be installed separately by running:
+
+```bash
+bash ./install-agent-skills.sh
+```
+
+What the installer currently does:
+- Symlinks each skill folder into Codex skills at `${CODEX_HOME:-~/.codex}/skills`.
+- Symlinks each skill folder into Claude Code skills at `~/.claude/skills`.
+- Backs up an existing target skill folder to `.BAK` (or `.BAK.<timestamp>` if `.BAK` already exists) before relinking.
+- Does not delete unrelated existing skills.
+- Because the target folders are symlinked, pulling new changes in this repo updates the installed skills automatically.
+
+If you want copy behavior for a one-off install, run:
+
+```bash
+MYSETUPS_INSTALL_MODE=copy bash ./install-agent-skills.sh
+```
+
+If you want to install into a different profile or skip one agent, set the target directory env vars:
+
+```bash
+MYSETUPS_CODEX_SKILLS_DIR="$HOME/.codex-work/skills" \
+MYSETUPS_CLAUDE_SKILLS_DIR="" \
+bash ./install-agent-skills.sh
+```
+
+Current shared agent skills include:
+- `agent-skills/grill-me`
