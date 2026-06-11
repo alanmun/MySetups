@@ -108,6 +108,8 @@ github_remote_matches_slug() {
   case "$remote_url" in
     "https://github.com/$plugin_slug"|\
     "https://github.com/$plugin_slug.git"|\
+    "https://"*"@github.com/$plugin_slug"|\
+    "https://"*"@github.com/$plugin_slug.git"|\
     "git@github.com:$plugin_slug"|\
     "git@github.com:$plugin_slug.git"|\
     "ssh://git@github.com/$plugin_slug"|\
