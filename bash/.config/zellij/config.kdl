@@ -1,0 +1,95 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// Zellij config — managed in MySetups, symlinked to ~/.config/zellij/config.kdl
+// Sits on top of Zellij's built-in defaults; this file only lists overrides.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ── Look: minimal, tmux-like ─────────────────────────────────────────────────
+// No boxes around panes. This also removes the per-pane title bar, so the frame
+// no longer echoes your shell prompt (that "repeated text" you didn't like).
+pane_frames false
+
+// No startup nag.
+show_startup_tips false
+
+// Custom top bar (zjstatus) lives in the "main" layout — see layouts/main.kdl.
+// It shows just the session name + tabs (no hardcoded "Zellij" prefix).
+default_layout "main"
+
+// ── Theme: Tokyo Night (inlined, so it looks identical on every machine) ──────
+theme "tokyonight"
+themes {
+    tokyonight {
+        fg      "#c0caf5"
+        bg      "#1f2335"
+        black   "#1d202f"
+        red     "#f7768e"
+        green   "#9ece6a"
+        yellow  "#e0af68"
+        blue    "#7aa2f7"
+        magenta "#bb9af7"
+        cyan    "#7dcfff"
+        white   "#a9b1d6"
+        orange  "#ff9e64"
+    }
+}
+
+// ── Keybindings ───────────────────────────────────────────────────────────────
+// Zellij's defaults are kept; this file only patches three things:
+//   1. Ctrl-g / Ctrl-q are stolen by VS Code, so retire them.
+//   2. Movement modes go tmux-style one-shot: one key = one action, then you're
+//      dropped back to normal — no Enter/Esc to dismiss.
+//   3. The fast modeless Alt shortcuts (already Zellij defaults) are documented
+//      below so you rarely need a mode at all.
+//
+// FASTEST WORKFLOW — no mode, no Enter, use these most of the time:
+//   Alt + h/j/k/l  (or Alt + arrows)   move focus between panes
+//   Alt + n                            new pane
+//   Alt + f                            toggle floating panes
+//   Alt + = / Alt + -                  grow / shrink the focused pane
+//   Alt + i / Alt + o                  move current tab left / right
+//   Alt + [ / Alt + ]                  cycle preset layouts
+//
+// MODES — press Ctrl-<key> to enter (movement modes now exit after one action):
+//   Ctrl-p pane    Ctrl-t tab    Ctrl-n resize   Ctrl-s scroll
+//   Ctrl-o session Ctrl-h move   Ctrl-b tmux-compat
+// Handy: Ctrl-o then d = detach (leave running) · Ctrl-o then q = quit session
+keybinds {
+    // 1. VS Code's integrated terminal steals Ctrl-g (Go to Line) and Ctrl-q.
+    //    Remove both so nothing fights over them.
+    unbind "Ctrl g"
+    unbind "Ctrl q"
+
+    // Lock mode (passes every keystroke straight through to the running app)
+    // now lives on Alt-g, which VS Code forwards to the terminal.
+    shared_except "locked" {
+        bind "Alt g" { SwitchToMode "locked"; }
+    }
+    locked {
+        bind "Alt g" { SwitchToMode "normal"; }
+    }
+
+    // Quitting the whole session is now deliberate: Ctrl-o then q.
+    // (Ctrl-o then d still just detaches, leaving the session alive.)
+    session {
+        bind "q" { Quit; }
+    }
+
+    // 2. tmux-style one-shot movement: do one thing, then back to normal mode.
+    pane {
+        bind "h" "left"  { MoveFocus "left";  SwitchToMode "normal"; }
+        bind "j" "down"  { MoveFocus "down";  SwitchToMode "normal"; }
+        bind "k" "up"    { MoveFocus "up";    SwitchToMode "normal"; }
+        bind "l" "right" { MoveFocus "right"; SwitchToMode "normal"; }
+        bind "p"         { SwitchFocus;       SwitchToMode "normal"; }
+    }
+    move {
+        bind "h" "left"  { MovePane "left";  SwitchToMode "normal"; }
+        bind "j" "down"  { MovePane "down";  SwitchToMode "normal"; }
+        bind "k" "up"    { MovePane "up";    SwitchToMode "normal"; }
+        bind "l" "right" { MovePane "right"; SwitchToMode "normal"; }
+    }
+    tab {
+        bind "h" "k" "left" "up"    { GoToPreviousTab; SwitchToMode "normal"; }
+        bind "l" "j" "right" "down" { GoToNextTab;     SwitchToMode "normal"; }
+    }
+}

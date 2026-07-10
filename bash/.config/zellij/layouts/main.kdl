@@ -1,0 +1,53 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// "main" layout — the default (selected via `default_layout "main"` in config.kdl).
+//
+// Top bar    : zjstatus — shows the session name + tabs, NO hardcoded "Zellij"
+//              prefix, styled to match the Tokyo Night theme.
+// Bottom bar : Zellij's built-in status-bar (live keybinding hints — handy while
+//              you're still learning the modes; delete that pane for max minimal).
+//
+// zjstatus.wasm is vendored in MySetups at bash/.config/zellij/plugins/ and the
+// installer symlinks it to ~/.config/zellij/plugins/zjstatus.wasm.
+// Palette: bg #1f2335 · blue #7aa2f7 · violet #bb9af7 · cyan #7dcfff ·
+//          green #9ece6a · orange #ff9e64 · yellow #e0af68 · muted #565f89
+// ─────────────────────────────────────────────────────────────────────────────
+layout {
+    default_tab_template {
+        // ── top bar ──────────────────────────────────────────────────────────
+        pane size=1 borderless=true {
+            plugin location="file:~/.config/zellij/plugins/zjstatus.wasm" {
+                format_left       "#[fg=#7aa2f7,bg=#1f2335,bold] {session} #[bg=#1f2335]{tabs}"
+                format_right      "{mode}"
+                format_space      "#[bg=#1f2335]"
+                format_precedence "lrc"
+
+                mode_default_to_mode "normal"
+                mode_normal       "#[fg=#9ece6a,bg=#1f2335,bold] NORMAL "
+                mode_locked       "#[fg=#f7768e,bg=#1f2335,bold] LOCKED "
+                mode_pane         "#[fg=#7aa2f7,bg=#1f2335,bold] PANE "
+                mode_tab          "#[fg=#7dcfff,bg=#1f2335,bold] TAB "
+                mode_resize       "#[fg=#ff9e64,bg=#1f2335,bold] RESIZE "
+                mode_move         "#[fg=#bb9af7,bg=#1f2335,bold] MOVE "
+                mode_scroll       "#[fg=#e0af68,bg=#1f2335,bold] SCROLL "
+                mode_search       "#[fg=#e0af68,bg=#1f2335,bold] SEARCH "
+                mode_enter_search "#[fg=#e0af68,bg=#1f2335,bold] SEARCH: "
+                mode_session      "#[fg=#bb9af7,bg=#1f2335,bold] SESSION "
+                mode_tmux         "#[fg=#ff9e64,bg=#1f2335,bold] TMUX "
+                mode_rename_tab   "#[fg=#7dcfff,bg=#1f2335,bold] RENAME TAB "
+                mode_rename_pane  "#[fg=#7aa2f7,bg=#1f2335,bold] RENAME PANE "
+
+                tab_normal        "#[fg=#565f89,bg=#1f2335] {index} {name} "
+                tab_active        "#[fg=#1f2335,bg=#7aa2f7,bold] {index} {name} "
+                tab_separator     "#[bg=#1f2335] "
+            }
+        }
+
+        // ── where each tab's actual panes go ──────────────────────────────────
+        children
+
+        // ── bottom bar (built-in keybinding hints) ────────────────────────────
+        pane size=1 borderless=true {
+            plugin location="zellij:status-bar"
+        }
+    }
+}
