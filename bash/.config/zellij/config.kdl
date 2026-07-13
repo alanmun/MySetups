@@ -15,6 +15,11 @@ show_startup_tips false
 // It shows just the session name + tabs (no hardcoded "Zellij" prefix).
 default_layout "main"
 
+// Persist each pane's scrollback with the session so `zellij attach` restores
+// your full work state (not just the pane layout + cwds). Sessions already
+// serialize by default; this adds the viewport contents on top.
+serialize_pane_viewport true
+
 // ── Theme: Tokyo Night (inlined, so it looks identical on every machine) ──────
 theme "tokyonight"
 themes {
