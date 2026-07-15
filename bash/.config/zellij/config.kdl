@@ -11,10 +11,6 @@ pane_frames false
 // No startup nag.
 show_startup_tips false
 
-// Custom top bar (zjstatus) lives in the "main" layout — see layouts/main.kdl.
-// It shows just the session name + tabs (no hardcoded "Zellij" prefix).
-default_layout "main"
-
 // Persist each pane's scrollback with the session so `zellij attach` restores
 // your full work state (not just the pane layout + cwds). Sessions already
 // serialize by default; this adds the viewport contents on top.

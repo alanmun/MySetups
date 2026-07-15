@@ -240,3 +240,32 @@ fi
 
 # helpme
 source "/home/alanmun/.config/helpme/helpme.bash"
+
+# -------------------------
+# Zellij auto-attach (VS Code)
+# -------------------------
+# In VS Code's integrated terminal, drop straight into a per-project Zellij
+# session named after the folder VS Code opened. Pair with the VS Code setting
+# terminal.integrated.enablePersistentSessions=false so opening/reloading a
+# folder spawns a fresh terminal (which runs this) instead of a dead one.
+# Opt a shell/project out with:  ZELLIJ_AUTO=0
+if [[ $- == *i* ]] \
+   && [[ "${TERM_PROGRAM:-}" == "vscode" ]] \
+   && [[ -z "${ZELLIJ:-}" ]] \
+   && [[ "${ZELLIJ_AUTO:-1}" != "0" ]] \
+   && command -v zellij >/dev/null 2>&1; then
+  zj_session="${PWD##*/}"          # basename of the workspace folder
+  zj_session="${zj_session// /-}"  # spaces -> dashes (Zellij dislikes spaces)
+
+  # Work around a VS Code + Zellij startup race: a *newly created* session reads
+  # the pty size too early and is born tiny (~80 cols), leaving dead space and a
+  # glitchy state (new panes render off-screen). So:
+  #   1. create it DETACHED — no mis-sized render happens at creation
+  #   2. wait until VS Code has finished sizing the pty (width climbs past the
+  #      bogus ~80-col default)
+  #   3. ATTACH — the attach path tracks the real terminal size correctly, which
+  #      is why attaching to pre-existing sessions always worked
+  zellij attach --create-background "$zj_session"
+  for _ in {1..20}; do [[ "$(tput cols 2>/dev/null || echo 0)" -gt 80 ]] && break; sleep 0.05; done
+  exec zellij attach --create "$zj_session"
+fi
