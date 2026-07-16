@@ -98,18 +98,20 @@ if $is_msys2; then
     # Override because venv activation path differs on Windows
     alias uvshell='source .venv/Scripts/activate'
 
+    # Hardcoded POSIX paths: these never change, and each $(linpath ...) was a
+    # subshell + cygpath spawn (~25ms on MSYS2) on every new shell/pane.
     export PATH="$PATH:/c/Users/Alan/AppData/Local/Programs/Microsoft VS Code/bin"
-    export PATH="$PATH:$(linpath 'C:\Users\Alan\AppData\Local\Programs\Python\Python312\')"
-    export PATH="$PATH:$(linpath 'C:\Users\Alan\AppData\Local\Programs\Python\Python312\Scripts')"
-    export PATH="$PATH:$(linpath 'c:\programdata\chocolatey\bin\')"
-    export PATH="$PATH:$(linpath 'c:\program files\Docker\Docker\resources\bin\')"
-    export PATH="$(linpath 'c:\program files\Git\cmd\'):$PATH"
-    export PATH="$PATH:$(linpath 'C:\Users\Alan\.local\bin')"
-    export PATH="$PATH:$(linpath 'C:\nvm4w\nodejs\')"
-    export PATH="$PATH:$(linpath 'C:\program files\Amazon\AWSCLIV2\')"
-    export PATH="$PATH:$(linpath 'C:\Users\Alan\AppData\Roaming\nvm\')"
+    export PATH="$PATH:/c/Users/Alan/AppData/Local/Programs/Python/Python312"
+    export PATH="$PATH:/c/Users/Alan/AppData/Local/Programs/Python/Python312/Scripts"
+    export PATH="$PATH:/c/ProgramData/chocolatey/bin"
+    export PATH="$PATH:/c/Program Files/Docker/Docker/resources/bin"
+    export PATH="/c/Program Files/Git/cmd:$PATH"
+    export PATH="$PATH:/c/Users/Alan/.local/bin"
+    export PATH="$PATH:/c/nvm4w/nodejs"
+    export PATH="$PATH:/c/Program Files/Amazon/AWSCLIV2"
+    export PATH="$PATH:/c/Users/Alan/AppData/Roaming/nvm"
     export PATH="$PATH:/ucrt64/bin"
-    export PATH="$PATH:$(linpath 'C:\Users\Alan\Handle')"
+    export PATH="$PATH:/c/Users/Alan/Handle"
   fi
 fi
 
