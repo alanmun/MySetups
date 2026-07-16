@@ -239,7 +239,7 @@ if $is_rpi; then
 fi
 
 # helpme
-source "/home/alanmun/.config/helpme/helpme.bash"
+[ -f "$HOME/.config/helpme/helpme.bash" ] && source "$HOME/.config/helpme/helpme.bash"
 
 # -------------------------
 # Zellij auto-attach (VS Code)
