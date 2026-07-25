@@ -112,6 +112,7 @@ if $is_msys2; then
     export PATH="$PATH:/c/Users/Alan/AppData/Roaming/nvm"
     export PATH="$PATH:/ucrt64/bin"
     export PATH="$PATH:/c/Users/Alan/Handle"
+    export PATH="$PATH:/c/Users/Alan/claude-openrouter"
   fi
 fi
 
