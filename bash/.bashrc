@@ -219,7 +219,7 @@ if $is_linux && ! $is_msys2; then
   alias python="/usr/bin/python3"
 
   # Go
-  export PATH="/usr/local/go/bin:$PATH"
+  export PATH="$HOME/.local/go/bin:$PATH"
 
   # Linuxbrew
   if [ -x /home/linuxbrew/.linuxbrew/bin/brew ]; then
@@ -235,6 +235,7 @@ if $is_linux && ! $is_msys2; then
   export BROWSER="wslview"
   export XDG_CONFIG_HOME="$HOME/.config"
   export EDITOR="code --wait"
+  export GIT_EDITOR="nvim"
 
   # bun
   export BUN_INSTALL="$HOME/.bun"
@@ -309,3 +310,6 @@ if [[ $- == *i* ]] \
   for _ in {1..20}; do [[ "$(tput cols 2>/dev/null || echo 0)" -gt 80 ]] && break; sleep 0.05; done
   exec zellij attach --create "$zj_session"
 fi
+
+# helpme
+source "/home/alan/.config/helpme/helpme.bash"

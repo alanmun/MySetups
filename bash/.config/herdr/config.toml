@@ -1,0 +1,10 @@
+[terminal]
+shell_mode = "login"
+
+[keys]
+prefix = "ctrl+a"
+help = ["prefix+?", "prefix+/"]
+previous_tab = "prefix+left"
+next_tab = "prefix+right"
+split_vertical = ["prefix+|", "prefix+\\"]
+split_horizontal = "prefix+minus"
