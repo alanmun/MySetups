@@ -2,6 +2,7 @@
 Personal setup repo for:
 - AutoHotkey scripts
 - Shared Bash environment config (Debian RPi, WSL2 Ubuntu, MSYS2 UCRT64 on Windows)
+- Audited and commit-pinned Herdr plugins
 - Shared agent skills for Codex and Claude Code
 
 Run the full setup with:
@@ -61,7 +62,34 @@ Current files in `bash/` include:
 - `bash/.bashrc`
 - `bash/.vimrc`
 - `bash/.tmux.conf`
+- `bash/.config/herdr/config.toml`
 - `bash/.config/nvim/init.lua`
+
+The Herdr config installs to `~/.config/herdr/config.toml`.
+
+## Audited Herdr Plugins
+
+Install the locked Herdr plugins separately with:
+
+```bash
+bash ./install-herdr-plugins.sh
+```
+
+The installer reads the audited revision and artifact digests from
+`herdr-plugins/herdr-reviewr.lock.json`. It installs the exact commit, verifies
+Herdr's requested and resolved revisions, verifies the installed binary's
+SHA-256 digest, and validates the plugin configuration. It never follows the
+plugin's `main` branch.
+
+An installed revision that differs from the lock is left untouched. After
+auditing a new release and updating its lock, permit that one replacement with:
+
+```bash
+MYSETUPS_REPLACE_HERDR_PLUGINS=1 bash ./install-herdr-plugins.sh
+```
+
+The current lock covers Linux x86-64 only. A release for another platform must
+be audited and added to the lock before installation.
 
 The Neovim config installs to `~/.config/nvim/init.lua`, which Neovim picks up by default on Linux, WSL, and MSYS2. On a machine running Windows-native Neovim (outside MSYS2), point it at this same file by setting `XDG_CONFIG_HOME` to `%USERPROFILE%\.config` or junctioning `%LOCALAPPDATA%\nvim` to `%USERPROFILE%\.config\nvim`.
 
