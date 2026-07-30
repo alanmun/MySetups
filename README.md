@@ -38,6 +38,9 @@ What the installer currently does:
 - Backs up an existing target file to `.BAK` (or `.BAK.<timestamp>` if `.BAK` already exists) before relinking.
 - Installs or updates the tmux plugin manager at `~/.tmux/plugins/tpm`.
 - Installs or updates `tmux-resurrect` and `tmux-continuum` at `~/.tmux/plugins/` so tmux persistence works immediately on each machine.
+- On MSYS2, replaces `tmux-continuum`'s status-bar polling with one lightweight
+  sleeping worker that autosaves every 15 minutes. This preserves automatic
+  persistence without process storms during redraw-heavy terminal apps.
 - Does not delete unrelated existing files in the target home.
 - Because the target files are symlinked, pulling new changes in this repo updates `~/.bashrc`, `~/.vimrc`, `~/.tmux.conf`, etc. automatically.
 
