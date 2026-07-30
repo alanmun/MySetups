@@ -64,7 +64,15 @@ alias gitb='git for-each-ref --sort=-committerdate --format="%(if)%(HEAD)%(then)
 # MSYS2 only
 # -------------------------
 if $is_msys2; then
-  export MSYS2_PATH_TYPE=append
+  # Only 'strict', 'inherit', and 'minimal' exist. This was 'append' -- not a real
+  # value, so /etc/profile fell through to its default branch and built a *minimal*
+  # PATH (System32/Wbem/PowerShell only), discarding the Windows PATH entirely.
+  # Harmless in the shell that sets it (profile already ran), but it's exported, so
+  # every child login shell got the stripped PATH -- e.g. every tmux pane, since
+  # .tmux.conf sets default-command "/bin/bash -l".
+  # 'inherit' is what 'append' was meant to be: /etc/profile puts the MSYS2 dirs
+  # first and *appends* the Windows PATH after them, so MSYS2 wins collisions.
+  export MSYS2_PATH_TYPE=inherit
 
   alias ls='ls --color=auto'
   alias grep='grep --color=auto'
@@ -98,21 +106,50 @@ if $is_msys2; then
     # Override because venv activation path differs on Windows
     alias uvshell='source .venv/Scripts/activate'
 
-    # Hardcoded POSIX paths: these never change, and each $(linpath ...) was a
-    # subshell + cygpath spawn (~25ms on MSYS2) on every new shell/pane.
-    export PATH="$PATH:/c/Users/Alan/AppData/Local/Programs/Microsoft VS Code/bin"
-    export PATH="$PATH:/c/Users/Alan/AppData/Local/Programs/Python/Python312"
-    export PATH="$PATH:/c/Users/Alan/AppData/Local/Programs/Python/Python312/Scripts"
-    export PATH="$PATH:/c/ProgramData/chocolatey/bin"
-    export PATH="$PATH:/c/Program Files/Docker/Docker/resources/bin"
+    # With MSYS2_PATH_TYPE=inherit the Windows PATH arrives appended after the MSYS2
+    # dirs, so most of what this block used to add is already present (claude via
+    # .local/bin, nvm, nodejs, Python, VS Code, Docker...). Two reasons to still list
+    # dirs here: a tool may be installed on one machine without being on that
+    # machine's Windows PATH, and $HOME-relative dirs are personal ones no installer
+    # registers.
+    #
+    # The old block hardcoded /c/Users/Alan, which is only correct on the desktop --
+    # on a machine with a different Windows username every such entry pointed at a
+    # nonexistent directory, which is what hid claude and nvm here.
+    #
+    # $HOME resolves per-machine (/c/Users/Alan vs /c/Users/alanm). The -d guard
+    # makes absent dirs free, so this same list is correct on every machine. The
+    # dedupe keeps nested login shells (tmux panes) from stacking duplicates.
+    # /ucrt64/bin is deliberately absent: /etc/profile already puts it first.
+    # All tests are shell builtins -- no cygpath subshells, so this stays fast.
+    for _d in \
+      "$HOME/Handle" \
+      "$HOME/claude-openrouter" \
+      "$HOME/.local/bin" \
+      "$HOME/AppData/Roaming/nvm" \
+      "$HOME/AppData/Local/Programs/Microsoft VS Code/bin" \
+      "$HOME"/AppData/Local/Programs/Python/Python3* \
+      "$HOME"/AppData/Local/Programs/Python/Python3*/Scripts \
+      /c/nvm4w/nodejs \
+      /c/ProgramData/chocolatey/bin \
+      "/c/Program Files/Docker/Docker/resources/bin" \
+      "/c/Program Files/Amazon/AWSCLIV2"
+    do
+      if [ -d "$_d" ]; then
+        case ":$PATH:" in
+          *":$_d:"*) ;;
+          *) PATH="$PATH:$_d" ;;
+        esac
+      fi
+    done
+    unset _d
+    export PATH
+
+    # Windows git must beat any msys/mingw git -- those two fight with each other
+    # and the Windows build is the one that behaves. Must stay a prepend: 'inherit'
+    # appends the Windows PATH *after* /usr/bin, so a pacman-installed git would
+    # otherwise win.
     export PATH="/c/Program Files/Git/cmd:$PATH"
-    export PATH="$PATH:/c/Users/Alan/.local/bin"
-    export PATH="$PATH:/c/nvm4w/nodejs"
-    export PATH="$PATH:/c/Program Files/Amazon/AWSCLIV2"
-    export PATH="$PATH:/c/Users/Alan/AppData/Roaming/nvm"
-    export PATH="$PATH:/ucrt64/bin"
-    export PATH="$PATH:/c/Users/Alan/Handle"
-    export PATH="$PATH:/c/Users/Alan/claude-openrouter"
   fi
 fi
 

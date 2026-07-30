@@ -1,0 +1,3 @@
+# Runtime state written by glasses/monitor.ps1 -- per-machine, not config.
+glasses/monitor.log
+glasses/state.json

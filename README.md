@@ -15,6 +15,7 @@ bash ./install.sh
 In short:
 - `BetterKeys.ahk` is for laptops (includes brightness changes).
 - `BetterKeysMediaOnly.ahk` is for desktops.
+- `SetDefaultBrowser.ahk` keeps a per-machine table of Browser Tamer profile ids, because Chrome numbers profile folders in creation order. Add a machine by its computer name (`echo %COMPUTERNAME%`); unlisted machines use the defaults and the script warns on startup if its Chrome profile folder is missing.
 
 To auto-start a script on Windows:
 1. Find your script, right-click it, then select "Create Shortcut".
