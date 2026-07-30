@@ -66,7 +66,11 @@ Current files in `bash/` include:
 - `bash/.config/herdr/config.toml`
 - `bash/.config/nvim/init.lua`
 
-The Herdr config installs to `~/.config/herdr/config.toml`.
+The Herdr config installs to `~/.config/herdr/config.toml`. Under MSYS2, the
+installer also hard-links it to `%APPDATA%\herdr\config.toml`, which is where
+native Windows Herdr reads configuration. If the repo and AppData are on
+different filesystems, it copies the file instead; rerun the installer after
+pulling config changes to refresh that copy.
 
 ## Audited Herdr Plugins
 
@@ -89,8 +93,9 @@ auditing a new release and updating its lock, permit that one replacement with:
 MYSETUPS_REPLACE_HERDR_PLUGINS=1 bash ./install-herdr-plugins.sh
 ```
 
-The current lock covers Linux x86-64 only. A release for another platform must
-be audited and added to the lock before installation.
+The current lock covers Linux x86-64 only. The full setup skips plugin
+installation on other platforms. A release for another platform must be audited
+and added to the lock before installation.
 
 The Neovim config installs to `~/.config/nvim/init.lua`, which Neovim picks up by default on Linux, WSL, and MSYS2. On a machine running Windows-native Neovim (outside MSYS2), point it at this same file by setting `XDG_CONFIG_HOME` to `%USERPROFILE%\.config` or junctioning `%LOCALAPPDATA%\nvim` to `%USERPROFILE%\.config\nvim`.
 
