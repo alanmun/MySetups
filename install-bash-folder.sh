@@ -17,6 +17,9 @@ install_mode="${MYSETUPS_INSTALL_MODE:-symlink}"
 install_tmux_tpm="${MYSETUPS_INSTALL_TMUX_TPM:-1}"
 install_tmux_plugins="${MYSETUPS_INSTALL_TMUX_PLUGINS:-1}"
 
+# shellcheck source=scripts/_backup-path.sh
+source "$script_dir/scripts/_backup-path.sh"
+
 if [ ! -d "$src_dir" ]; then
   echo "Expected source folder missing: $src_dir" >&2
   exit 1
@@ -53,25 +56,6 @@ case "$install_tmux_plugins" in
 esac
 
 mkdir -p "$target_home"
-
-backup_file() {
-  local original="$1"
-  local backup
-  local timestamp
-
-  if [ ! -e "$original" ] && [ ! -L "$original" ]; then
-    return 0
-  fi
-
-  backup="${original}.BAK"
-  if [ -e "$backup" ]; then
-    timestamp="$(date +%Y%m%d%H%M%S)"
-    backup="${original}.BAK.${timestamp}"
-  fi
-
-  mv "$original" "$backup"
-  echo "Backed up existing file: $original -> $backup"
-}
 
 install_tmux_plugin_manager() {
   local tmux_dir="$target_home/.tmux"
@@ -194,6 +178,7 @@ install_windows_herdr_config() {
   windows_appdata="$(cygpath -u "$APPDATA")"
   dest_file="$windows_appdata/herdr/config.toml"
   mkdir -p "$(dirname "$dest_file")"
+  prune_timestamped_backups "$dest_file"
 
   if [ "$install_mode" = "symlink" ]; then
     if [ -e "$dest_file" ] && [ "$src_file" -ef "$dest_file" ]; then
@@ -201,7 +186,7 @@ install_windows_herdr_config() {
       return 0
     fi
 
-    backup_file "$dest_file"
+    backup_path "$dest_file"
     if ln "$src_file" "$dest_file" 2>/dev/null; then
       echo "Hard-linked Windows Herdr config: $dest_file -> $src_file"
       return 0
@@ -217,7 +202,7 @@ install_windows_herdr_config() {
     return 0
   fi
 
-  backup_file "$dest_file"
+  backup_path "$dest_file"
   cp -f "$src_file" "$dest_file"
   echo "Copied Windows Herdr config: $dest_file"
 }
@@ -226,6 +211,7 @@ while IFS= read -r -d '' rel_path; do
   src_file="$src_dir/$rel_path"
   dest_file="$target_home/$rel_path"
   mkdir -p "$(dirname "$dest_file")"
+  prune_timestamped_backups "$dest_file"
 
   if [ "$install_mode" = "symlink" ]; then
     if [ -L "$dest_file" ] && [ "$(readlink "$dest_file")" = "$src_file" ]; then
@@ -234,7 +220,7 @@ while IFS= read -r -d '' rel_path; do
     fi
 
     if [ -e "$dest_file" ] || [ -L "$dest_file" ]; then
-      backup_file "$dest_file"
+      backup_path "$dest_file"
     fi
 
     ln -s "$src_file" "$dest_file"
@@ -245,9 +231,9 @@ while IFS= read -r -d '' rel_path; do
   # Always replace symlinks at the destination path; this avoids writing through
   # stale or dangling links (common in MSYS2 home setups).
   if [ -L "$dest_file" ]; then
-    backup_file "$dest_file"
+    backup_path "$dest_file"
   elif [ -f "$dest_file" ] && ! cmp -s "$src_file" "$dest_file"; then
-    backup_file "$dest_file"
+    backup_path "$dest_file"
   fi
   cp -f "$src_file" "$dest_file"
 done < <(cd "$src_dir" && find . -type f -print0 | sed -z 's#^\./##')

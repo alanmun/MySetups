@@ -35,7 +35,8 @@ bash ./install-bash-folder.sh
 
 What the installer currently does:
 - Symlinks every file from repo `bash/` into your target home (default: `~`), preserving paths.
-- Backs up an existing target file to `.BAK` (or `.BAK.<timestamp>` if `.BAK` already exists) before relinking.
+- Keeps one rolling `.BAK` per managed target, overwriting the previous backup
+  before relinking and removing legacy timestamped backups.
 - Installs or updates the tmux plugin manager at `~/.tmux/plugins/tpm`.
 - Installs or updates `tmux-resurrect` and `tmux-continuum` at `~/.tmux/plugins/` so tmux persistence works immediately on each machine.
 - On MSYS2, replaces `tmux-continuum`'s status-bar polling with one lightweight
@@ -112,7 +113,8 @@ bash ./install-agent-skills.sh
 What the installer currently does:
 - Symlinks each skill folder into Codex skills at `${CODEX_HOME:-~/.codex}/skills`.
 - Symlinks each skill folder into Claude Code skills at `~/.claude/skills`.
-- Backs up an existing target skill folder to `.BAK` (or `.BAK.<timestamp>` if `.BAK` already exists) before relinking.
+- Keeps one rolling `.BAK` per managed skill, overwriting the previous backup
+  before relinking and removing legacy timestamped backups.
 - Does not delete unrelated existing skills.
 - Because the target folders are symlinked, pulling new changes in this repo updates the installed skills automatically.
 
