@@ -1,0 +1,14 @@
+{
+  "plugin_id": "persiyanov.reviewr",
+  "source": "persiyanov/herdr-reviewr",
+  "version": "0.26.2",
+  "commit": "1068100ec5553f51f7527f60fb08055d7f2fd29e",
+  "audited_on": "2026-07-30",
+  "artifacts": {
+    "x86_64-unknown-linux-musl": {
+      "archive": "herdr-reviewr-x86_64-unknown-linux-musl.tar.gz",
+      "archive_sha256": "3d7c7b66de0c25e9d50a9a29df3b693111a9d35b1296d12c92ab0dff30e69a2b",
+      "binary_sha256": "cab03543f5f931991911f861f946901f92b78dff58c672cf9a42d4bf88e93378"
+    }
+  }
+}

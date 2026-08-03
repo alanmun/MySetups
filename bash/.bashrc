@@ -67,7 +67,15 @@ alias codex='codex --profile claude-style'
 # MSYS2 only
 # -------------------------
 if $is_msys2; then
-  export MSYS2_PATH_TYPE=append
+  # Only 'strict', 'inherit', and 'minimal' exist. This was 'append' -- not a real
+  # value, so /etc/profile fell through to its default branch and built a *minimal*
+  # PATH (System32/Wbem/PowerShell only), discarding the Windows PATH entirely.
+  # Harmless in the shell that sets it (profile already ran), but it's exported, so
+  # every child login shell got the stripped PATH -- e.g. every tmux pane, since
+  # .tmux.conf sets default-command "/bin/bash -l".
+  # 'inherit' is what 'append' was meant to be: /etc/profile puts the MSYS2 dirs
+  # first and *appends* the Windows PATH after them, so MSYS2 wins collisions.
+  export MSYS2_PATH_TYPE=inherit
 
   alias ls='ls --color=auto'
   alias grep='grep --color=auto'
@@ -101,20 +109,50 @@ if $is_msys2; then
     # Override because venv activation path differs on Windows
     alias uvshell='source .venv/Scripts/activate'
 
-    # Hardcoded POSIX paths: these never change, and each $(linpath ...) was a
-    # subshell + cygpath spawn (~25ms on MSYS2) on every new shell/pane.
-    export PATH="$PATH:/c/Users/Alan/AppData/Local/Programs/Microsoft VS Code/bin"
-    export PATH="$PATH:/c/Users/Alan/AppData/Local/Programs/Python/Python312"
-    export PATH="$PATH:/c/Users/Alan/AppData/Local/Programs/Python/Python312/Scripts"
-    export PATH="$PATH:/c/ProgramData/chocolatey/bin"
-    export PATH="$PATH:/c/Program Files/Docker/Docker/resources/bin"
+    # With MSYS2_PATH_TYPE=inherit the Windows PATH arrives appended after the MSYS2
+    # dirs, so most of what this block used to add is already present (claude via
+    # .local/bin, nvm, nodejs, Python, VS Code, Docker...). Two reasons to still list
+    # dirs here: a tool may be installed on one machine without being on that
+    # machine's Windows PATH, and $HOME-relative dirs are personal ones no installer
+    # registers.
+    #
+    # The old block hardcoded /c/Users/Alan, which is only correct on the desktop --
+    # on a machine with a different Windows username every such entry pointed at a
+    # nonexistent directory, which is what hid claude and nvm here.
+    #
+    # $HOME resolves per-machine (/c/Users/Alan vs /c/Users/alanm). The -d guard
+    # makes absent dirs free, so this same list is correct on every machine. The
+    # dedupe keeps nested login shells (tmux panes) from stacking duplicates.
+    # /ucrt64/bin is deliberately absent: /etc/profile already puts it first.
+    # All tests are shell builtins -- no cygpath subshells, so this stays fast.
+    for _d in \
+      "$HOME/Handle" \
+      "$HOME/claude-openrouter" \
+      "$HOME/.local/bin" \
+      "$HOME/AppData/Roaming/nvm" \
+      "$HOME/AppData/Local/Programs/Microsoft VS Code/bin" \
+      "$HOME"/AppData/Local/Programs/Python/Python3* \
+      "$HOME"/AppData/Local/Programs/Python/Python3*/Scripts \
+      /c/nvm4w/nodejs \
+      /c/ProgramData/chocolatey/bin \
+      "/c/Program Files/Docker/Docker/resources/bin" \
+      "/c/Program Files/Amazon/AWSCLIV2"
+    do
+      if [ -d "$_d" ]; then
+        case ":$PATH:" in
+          *":$_d:"*) ;;
+          *) PATH="$PATH:$_d" ;;
+        esac
+      fi
+    done
+    unset _d
+    export PATH
+
+    # Windows git must beat any msys/mingw git -- those two fight with each other
+    # and the Windows build is the one that behaves. Must stay a prepend: 'inherit'
+    # appends the Windows PATH *after* /usr/bin, so a pacman-installed git would
+    # otherwise win.
     export PATH="/c/Program Files/Git/cmd:$PATH"
-    export PATH="$PATH:/c/Users/Alan/.local/bin"
-    export PATH="$PATH:/c/nvm4w/nodejs"
-    export PATH="$PATH:/c/Program Files/Amazon/AWSCLIV2"
-    export PATH="$PATH:/c/Users/Alan/AppData/Roaming/nvm"
-    export PATH="$PATH:/ucrt64/bin"
-    export PATH="$PATH:/c/Users/Alan/Handle"
   fi
 fi
 
@@ -184,7 +222,7 @@ if $is_linux && ! $is_msys2; then
   alias python="/usr/bin/python3"
 
   # Go
-  export PATH="/usr/local/go/bin:$PATH"
+  export PATH="$HOME/.local/go/bin:$PATH"
 
   # Linuxbrew
   if [ -x /home/linuxbrew/.linuxbrew/bin/brew ]; then
@@ -200,6 +238,7 @@ if $is_linux && ! $is_msys2; then
   export BROWSER="wslview"
   export XDG_CONFIG_HOME="$HOME/.config"
   export EDITOR="code --wait"
+  export GIT_EDITOR="nvim"
 
   # bun
   export BUN_INSTALL="$HOME/.bun"
@@ -246,3 +285,32 @@ fi
 # helpme
 [ -f "$HOME/.config/helpme/helpme.bash" ] && source "$HOME/.config/helpme/helpme.bash"
 export BUILDX_NO_DEFAULT_ATTESTATIONS=1
+
+# -------------------------
+# Zellij auto-attach (VS Code)
+# -------------------------
+# In VS Code's integrated terminal, drop straight into a per-project Zellij
+# session named after the folder VS Code opened. Pair with the VS Code setting
+# terminal.integrated.enablePersistentSessions=false so opening/reloading a
+# folder spawns a fresh terminal (which runs this) instead of a dead one.
+# Opt a shell/project out with:  ZELLIJ_AUTO=0
+if [[ $- == *i* ]] \
+   && [[ "${TERM_PROGRAM:-}" == "vscode" ]] \
+   && [[ -z "${ZELLIJ:-}" ]] \
+   && [[ "${ZELLIJ_AUTO:-1}" != "0" ]] \
+   && command -v zellij >/dev/null 2>&1; then
+  zj_session="${PWD##*/}"          # basename of the workspace folder
+  zj_session="${zj_session// /-}"  # spaces -> dashes (Zellij dislikes spaces)
+
+  # Work around a VS Code + Zellij startup race: a *newly created* session reads
+  # the pty size too early and is born tiny (~80 cols), leaving dead space and a
+  # glitchy state (new panes render off-screen). So:
+  #   1. create it DETACHED — no mis-sized render happens at creation
+  #   2. wait until VS Code has finished sizing the pty (width climbs past the
+  #      bogus ~80-col default)
+  #   3. ATTACH — the attach path tracks the real terminal size correctly, which
+  #      is why attaching to pre-existing sessions always worked
+  zellij attach --create-background "$zj_session"
+  for _ in {1..20}; do [[ "$(tput cols 2>/dev/null || echo 0)" -gt 80 ]] && break; sleep 0.05; done
+  exec zellij attach --create "$zj_session"
+fi

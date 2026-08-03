@@ -1,0 +1,11 @@
+{
+  "YogaModeFriendly": "Lenovo Yoga Mode Control Device",
+  "YogaModeFallbackInstance": "ACPI\\YMC2017\\0",
+  "TouchscreenIds": [
+    "HID\\WACF2200&COL08\\5&1F5B1787&1&0007",
+    "ACPI\\WACF2200\\4&2D777A4D&0",
+    "HID\\WACF2200&COL01\\5&1F5B1787&1&0000"
+  ],
+  "InternalPanelRegex": "^DISPLAY\\\\LEN",
+  "PollSeconds": 5
+}

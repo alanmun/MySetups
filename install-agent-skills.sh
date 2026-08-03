@@ -18,6 +18,9 @@ codex_default_skills_dir="${CODEX_HOME:-$HOME/.codex}/skills"
 codex_skills_dir="${MYSETUPS_CODEX_SKILLS_DIR-$codex_default_skills_dir}"
 claude_skills_dir="${MYSETUPS_CLAUDE_SKILLS_DIR-$HOME/.claude/skills}"
 
+# shellcheck source=scripts/_backup-path.sh
+source "$script_dir/scripts/_backup-path.sh"
+
 if [ ! -d "$src_dir" ]; then
   echo "Expected source folder missing: $src_dir" >&2
   exit 1
@@ -33,25 +36,6 @@ case "$install_mode" in
     ;;
 esac
 
-backup_path() {
-  local original="$1"
-  local backup
-  local timestamp
-
-  if [ ! -e "$original" ] && [ ! -L "$original" ]; then
-    return 0
-  fi
-
-  backup="${original}.BAK"
-  if [ -e "$backup" ]; then
-    timestamp="$(date +%Y%m%d%H%M%S)"
-    backup="${original}.BAK.${timestamp}"
-  fi
-
-  mv "$original" "$backup"
-  echo "Backed up existing path: $original -> $backup"
-}
-
 install_skill_to_target() {
   local skill_name="$1"
   local skill_src="$2"
@@ -64,6 +48,7 @@ install_skill_to_target() {
 
   skill_dest="$target_dir/$skill_name"
   mkdir -p "$target_dir"
+  prune_timestamped_backups "$skill_dest"
 
   if [ "$install_mode" = "symlink" ]; then
     if [ -L "$skill_dest" ] && [ "$(readlink "$skill_dest")" = "$skill_src" ]; then
