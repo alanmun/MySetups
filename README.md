@@ -2,6 +2,7 @@
 Personal setup repo for:
 - AutoHotkey scripts
 - Shared Bash environment config (Debian RPi, WSL2 Ubuntu, MSYS2 UCRT64 on Windows)
+- Shared Codex config profiles
 - Shared agent skills for Codex and Claude Code
 
 Run the full setup with:
@@ -64,6 +65,27 @@ Current files in `bash/` include:
 - `bash/.config/nvim/init.lua`
 
 The Neovim config installs to `~/.config/nvim/init.lua`, which Neovim picks up by default on Linux, WSL, and MSYS2. On a machine running Windows-native Neovim (outside MSYS2), point it at this same file by setting `XDG_CONFIG_HOME` to `%USERPROFILE%\.config` or junctioning `%LOCALAPPDATA%\nvim` to `%USERPROFILE%\.config\nvim`.
+
+## Shared Codex Profiles
+
+Personal Codex config profiles live under `codex/` and can be installed separately by running:
+
+```bash
+bash ./install-codex-profiles.sh
+```
+
+The installer symlinks each `*.config.toml` profile into `${CODEX_HOME:-~/.codex}`. The shared Bash config aliases `codex` to `codex --profile claude-style`, so interactive Codex CLI sessions automatically load `codex/claude-style.config.toml`. Because the installed profile is a symlink, pulling changes in this repository updates the active profile immediately.
+
+For one-off copy behavior or a different Codex home, run:
+
+```bash
+MYSETUPS_INSTALL_MODE=copy \
+MYSETUPS_CODEX_HOME="$HOME/.codex-work" \
+bash ./install-codex-profiles.sh
+```
+
+Current shared Codex profiles include:
+- `codex/claude-style.config.toml`
 
 ## Shared Agent Skills
 Personal, non-project-specific agent skills live under `agent-skills/` and can be installed separately by running:
