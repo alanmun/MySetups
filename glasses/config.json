@@ -1,11 +1,7 @@
 {
-  "YogaModeFriendly": "Lenovo Yoga Mode Control Device",
-  "YogaModeFallbackInstance": "ACPI\\YMC2017\\0",
-  "TouchscreenIds": [
-    "HID\\WACF2200&COL08\\5&1F5B1787&1&0007",
-    "ACPI\\WACF2200\\4&2D777A4D&0",
-    "HID\\WACF2200&COL01\\5&1F5B1787&1&0000"
-  ],
-  "InternalPanelRegex": "^DISPLAY\\\\LEN",
-  "PollSeconds": 5
+  "_comment": "YogaMode* keys were REMOVED on purpose. Disabling the Lenovo Yoga Mode Control device does not keep the keyboard alive past 180 deg - it only strands input until sleep/resume. See README.md.",
+
+  "TouchscreenParentId": "ACPI\\WACF2200\\4&2D777A4D&0",
+  "TouchscreenHint": "(?i)^Wacom Device$",
+  "InternalPanelRegex": "^DISPLAY\\\\LEN"
 }

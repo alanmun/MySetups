@@ -1,0 +1,4 @@
+interface:
+  display_name: "TLDR"
+  short_description: "Shape clear ADHD-friendly responses"
+  default_prompt: "Use $tldr to make this response concise, clear, and easy to follow."
