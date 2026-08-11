@@ -1,3 +1,4 @@
+onboarding = false
 [terminal]
 shell_mode = "login"
 
@@ -8,3 +9,18 @@ previous_tab = "prefix+left"
 next_tab = "prefix+right"
 split_vertical = ["prefix+|", "prefix+\\"]
 split_horizontal = "prefix+minus"
+
+# reviewr sidebar toggle. prefix+b is herdr's own sidebar, so shift+b sits next
+# to it. type = "shell" because the action opens the pane itself — we just need
+# the CLI call to run detached, not in a pane of its own.
+[[keys.command]]
+key = "prefix+shift+b"
+type = "shell"
+command = "herdr plugin action invoke toggle --plugin persiyanov.reviewr"
+
+[ui.toast]
+delivery = "terminal"
+
+[theme]
+name = "rose-pine"
+auto_switch = false
