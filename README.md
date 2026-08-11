@@ -127,3 +127,4 @@ bash ./install-agent-skills.sh
 
 Current shared agent skills include:
 - `agent-skills/grill-me`
+- `agent-skills/tldr`
