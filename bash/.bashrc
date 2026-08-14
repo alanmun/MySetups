@@ -314,3 +314,6 @@ if [[ $- == *i* ]] \
   for _ in {1..20}; do [[ "$(tput cols 2>/dev/null || echo 0)" -gt 80 ]] && break; sleep 0.05; done
   exec zellij attach --create "$zj_session"
 fi
+
+# helpme
+source "/home/alan/.config/helpme/helpme.bash"

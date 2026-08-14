@@ -1,5 +1,6 @@
 vim.opt.ignorecase = true
 vim.opt.smartcase = true
+vim.opt.number = true
 vim.opt.scrolloff = 8
 vim.opt.termguicolors = true
 
