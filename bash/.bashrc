@@ -211,6 +211,7 @@ if $is_linux && ! $is_msys2; then
   alias ll='ls -alF'
   alias la='ls -A'
   alias l='ls -CF'
+  alias sentry-cli='sentry'  # agents keep recalling the old name from stale training data
 
   # Handy function from old bashrc
   c() { cd "$@" && ls; }
@@ -218,8 +219,9 @@ if $is_linux && ! $is_msys2; then
   # User-local bins
   export PATH="$HOME/.local/bin:$PATH"
 
-  # Python alias from old config
-  alias python="/usr/bin/python3"
+  # Note: do not alias python to an absolute path such as /usr/bin/python3.
+  # Aliases take precedence over PATH, so it silently defeats every virtualenv:
+  # an activated venv's `python` would still run the system interpreter.
 
   # Go
   export PATH="$HOME/.local/go/bin:$PATH"
@@ -240,6 +242,92 @@ if $is_linux && ! $is_msys2; then
   export EDITOR="code --wait"
   export GIT_EDITOR="nvim"
 
+  if $is_wsl; then
+    # `code` inside WSL is a thin client that talks to the VS Code extension host
+    # over a unix socket named by VSCODE_IPC_HOOK_CLI. Two things rot that value:
+    #
+    #  1. The socket is per extension host. Every window reload, VS Code upgrade
+    #     or WSL reconnect makes a new one. Herdr is a persistent server whose
+    #     panes inherit *its* environment, so every Herdr shell keeps pointing at
+    #     the socket of whatever terminal launched `herdr` in the first place.
+    #  2. WSL sets XDG_RUNTIME_DIR=/run/user/1000 but never registers a logind
+    #     session, so unless linger is enabled that directory does not exist and
+    #     VS Code fails to bind the socket at all (see
+    #     ~/.vscode-server/server-env-setup). Fix: sudo loginctl enable-linger $USER
+    #
+    # So instead of trusting the inherited value, probe it, and if it is dead find
+    # the newest socket that actually accepts a connection. This also selects the
+    # freshest launcher, since VS Code deletes the old server build on upgrade.
+    __vscode_socket_alive() {
+      # $1 = socket path, $2 = node binary to use for the probe
+      [ -S "$1" ] || return 1
+      "$2" -e '
+        const s = require("net").connect(process.argv[1]);
+        s.once("connect", () => { s.destroy(); process.exit(0); });
+        s.once("error", () => process.exit(1));
+        setTimeout(() => process.exit(1), 700).unref();
+      ' "$1" >/dev/null 2>&1
+    }
+
+    __vscode_find_socket() {
+      # Newest connectable vscode-ipc socket across the dirs VS Code may use.
+      local node="$1" dir sock
+      for dir in "${XDG_RUNTIME_DIR:-}" /tmp; do
+        [ -n "$dir" ] && [ -d "$dir" ] || continue
+        # shellcheck disable=SC2012
+        for sock in $(ls -t "$dir"/vscode-ipc-*.sock 2>/dev/null); do
+          if __vscode_socket_alive "$sock" "$node"; then
+            printf '%s\n' "$sock"
+            return 0
+          fi
+        done
+      done
+      return 1
+    }
+
+    code() {
+      local launcher candidate node sock
+
+      for candidate in "$HOME"/.vscode-server/bin/*/bin/remote-cli/code; do
+        [ -x "$candidate" ] || continue
+        if [ -z "${launcher:-}" ] || [ "$candidate" -nt "$launcher" ]; then
+          launcher="$candidate"
+        fi
+      done
+
+      if [ -n "${launcher:-}" ]; then
+        node="${launcher%/bin/remote-cli/code}/node"
+        [ -x "$node" ] || node="$(type -P node)"
+
+        if [ -n "$node" ] && ! __vscode_socket_alive "${VSCODE_IPC_HOOK_CLI:-}" "$node"; then
+          if sock="$(__vscode_find_socket "$node")"; then
+            VSCODE_IPC_HOOK_CLI="$sock" "$launcher" "$@"
+            return $?
+          fi
+          printf 'code: no live VS Code IPC socket found.\n' >&2
+          printf '      Open a new VS Code integrated terminal (that binds a fresh socket) and retry.\n' >&2
+          printf '      If none appear, /run/user/%s is probably missing: sudo loginctl enable-linger %s\n' "$(id -u)" "$USER" >&2
+          return 1
+        fi
+
+        "$launcher" "$@"
+        return $?
+      fi
+
+      # The WSL server may not be installed yet. Force a fresh PATH lookup instead
+      # of consulting a stale Bash hash, then use the Windows launcher if present.
+      hash -d code 2>/dev/null || true
+      launcher="$(type -P code)"
+      if [ -n "$launcher" ] && [ -x "$launcher" ]; then
+        "$launcher" "$@"
+        return $?
+      fi
+
+      printf 'code: no usable VS Code launcher found\n' >&2
+      return 127
+    }
+  fi
+
   # bun
   export BUN_INSTALL="$HOME/.bun"
   [ -d "$BUN_INSTALL/bin" ] && export PATH="$BUN_INSTALL/bin:$PATH"
@@ -249,6 +337,17 @@ if $is_linux && ! $is_msys2; then
 
   # opencode
   export PATH="$HOME/.opencode/bin:$PATH"
+
+  # The three below exist for Troutwood app development
+  # jdk 17 — the gradle wrapper (9.3.1) and the maestro cli both need it
+  [ -d /usr/lib/jvm/java-17-openjdk-amd64 ] && export JAVA_HOME="/usr/lib/jvm/java-17-openjdk-amd64"
+
+  # android sdk — adb, sdkmanager. USB is invisible to WSL2 under NAT networking, so the
+  # device is attached over wireless debugging: adb pair, adb connect, then
+  # `adb reverse tcp:8081 tcp:8081` so the phone can reach Metro.
+  export ANDROID_HOME="$HOME/Android/Sdk"
+  [ -d "$ANDROID_HOME/platform-tools" ] && export PATH="$ANDROID_HOME/platform-tools:$PATH"
+  [ -d "$ANDROID_HOME/cmdline-tools/latest/bin" ] && export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"
 
   # bash aliases file
   if [ -f ~/.bash_aliases ]; then
@@ -285,35 +384,3 @@ fi
 # helpme
 [ -f "$HOME/.config/helpme/helpme.bash" ] && source "$HOME/.config/helpme/helpme.bash"
 export BUILDX_NO_DEFAULT_ATTESTATIONS=1
-
-# -------------------------
-# Zellij auto-attach (VS Code)
-# -------------------------
-# In VS Code's integrated terminal, drop straight into a per-project Zellij
-# session named after the folder VS Code opened. Pair with the VS Code setting
-# terminal.integrated.enablePersistentSessions=false so opening/reloading a
-# folder spawns a fresh terminal (which runs this) instead of a dead one.
-# Opt a shell/project out with:  ZELLIJ_AUTO=0
-if [[ $- == *i* ]] \
-   && [[ "${TERM_PROGRAM:-}" == "vscode" ]] \
-   && [[ -z "${ZELLIJ:-}" ]] \
-   && [[ "${ZELLIJ_AUTO:-1}" != "0" ]] \
-   && command -v zellij >/dev/null 2>&1; then
-  zj_session="${PWD##*/}"          # basename of the workspace folder
-  zj_session="${zj_session// /-}"  # spaces -> dashes (Zellij dislikes spaces)
-
-  # Work around a VS Code + Zellij startup race: a *newly created* session reads
-  # the pty size too early and is born tiny (~80 cols), leaving dead space and a
-  # glitchy state (new panes render off-screen). So:
-  #   1. create it DETACHED — no mis-sized render happens at creation
-  #   2. wait until VS Code has finished sizing the pty (width climbs past the
-  #      bogus ~80-col default)
-  #   3. ATTACH — the attach path tracks the real terminal size correctly, which
-  #      is why attaching to pre-existing sessions always worked
-  zellij attach --create-background "$zj_session"
-  for _ in {1..20}; do [[ "$(tput cols 2>/dev/null || echo 0)" -gt 80 ]] && break; sleep 0.05; done
-  exec zellij attach --create "$zj_session"
-fi
-
-# helpme
-source "/home/alan/.config/helpme/helpme.bash"
