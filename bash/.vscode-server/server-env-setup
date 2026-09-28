@@ -1,0 +1,18 @@
+#!/bin/sh
+# Sourced (POSIX sh) by the Remote-WSL extension's wslServer.sh before the VS Code
+# server starts. Symlinked from ~/.vscode-server/server-env-setup.
+#
+# WSL sets XDG_RUNTIME_DIR=/run/user/1000 in every process it launches, but with
+# systemd enabled nothing registers a logind session, so user@1000.service never
+# starts and /run/user/1000 is never created (or is torn down when the last
+# session ends). VS Code trusts XDG_RUNTIME_DIR verbatim for its CLI IPC socket
+# and fails every bind with "listen EACCES /run/user/1000/vscode-ipc-*.sock",
+# which surfaces as `code <file>` printing "connect ENOENT ...vscode-ipc...sock".
+#
+# The real fix is `sudo loginctl enable-linger $USER`, which keeps /run/user/1000
+# alive. This guard is the belt to that suspender: if the runtime dir is missing
+# or unwritable, drop the variable so VS Code falls back to os.tmpdir() (/tmp)
+# and the socket always has somewhere to live.
+if [ -n "${XDG_RUNTIME_DIR:-}" ] && { [ ! -d "$XDG_RUNTIME_DIR" ] || [ ! -w "$XDG_RUNTIME_DIR" ]; }; then
+  unset XDG_RUNTIME_DIR
+fi
