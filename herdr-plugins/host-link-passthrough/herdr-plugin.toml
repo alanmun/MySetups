@@ -1,0 +1,22 @@
+id = "alanmun.host-link-passthrough"
+name = "host-link-passthrough"
+version = "0.1.0"
+# link_handlers, HERDR_PLUGIN_CLICKED_URL and invocation_source = "link_click" are documented
+# from 0.8.x; the whole plugin is inert on a herdr that predates them.
+min_herdr_version = "0.8.2"
+platforms = ["linux"]
+description = "Claim Ctrl-clicked http(s) URLs so VS Code's terminal and herdr stop both opening them."
+
+# Claiming the URL is the point: a matched link handler suppresses herdr's own xdg-open, and the
+# action decides whether anything should open at all.
+[[link_handlers]]
+id = "http"
+title = "Open URL (defer to the host terminal)"
+pattern = "^https?://"
+action = "open"
+
+[[actions]]
+id = "open"
+title = "host-link-passthrough: open the clicked URL"
+contexts = ["pane"]
+command = ["bash", "_open_clicked_url.sh"]
