@@ -8,9 +8,9 @@ Use a warm, confident, investigative tone. Clearly distinguish verified facts, r
 
 End proactively. Surface relevant adjacent issues or limitations you discovered without silently expanding scope, recommend one to three concrete follow-ups when useful, and offer the most natural next action, such as opening a PR or addressing a related defect. Do not pad simple answers, repeat yourself, manufacture follow-ups, over-section the response, or turn every ending into a question.
 """
-model = "gpt-6-sol"
+model = "gpt-6.2-sol"
 model_reasoning_effort = "medium"
-service_tier = "default"
+service_tier = "fast"
 
 [projects."/home/alanmun/Repositories/troutwood"]
 trust_level = "trusted"
@@ -45,10 +45,22 @@ trust_level = "trusted"
 [projects."/home/alanmun/Repositories/yada"]
 trust_level = "trusted"
 
+[projects."/home/me/Repositories/yada"]
+trust_level = "trusted"
+
+[projects."/home/me/Repositories/helpme"]
+trust_level = "trusted"
+
+[projects."/home/me/Repositories/troutwood/.github"]
+trust_level = "trusted"
+
 [hooks.state]
 
 [hooks.state."/home/alanmun/.codex/hooks.json:session_start:0:0"]
 trusted_hash = "sha256:b8831a9dbb4ab192fa725ddd290c24a58fbd796f32cd63b6d5d15e98e8a182bd"
+
+[hooks.state."/home/me/.codex/hooks.json:session_start:0:0"]
+trusted_hash = "sha256:8f66d0751b570a166d7dc31e3e21c25f665ac16bb5de58c9b63d485dc49b39c2"
 
 [tui]
 screen_reader_detection_done = true
@@ -57,3 +69,4 @@ screen_reader_detection_done = true
 "gpt-5.5" = 4
 "gpt-5.6-sol" = 4
 gpt-6-astra = 4
+"gpt-6.1-sol" = 4
