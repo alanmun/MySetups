@@ -45,6 +45,12 @@ trust_level = "trusted"
 [projects."/home/alanmun/Repositories/yada"]
 trust_level = "trusted"
 
+[projects."/home/alan/Repositories/troutwood/plaid-service"]
+trust_level = "trusted"
+
+[projects."/home/alan/Repositories/look-up"]
+trust_level = "trusted"
+
 [projects."/home/me/Repositories/yada"]
 trust_level = "trusted"
 
@@ -64,6 +70,7 @@ trusted_hash = "sha256:8f66d0751b570a166d7dc31e3e21c25f665ac16bb5de58c9b63d485dc
 
 [tui]
 screen_reader_detection_done = true
+gpt-6-astra = 4
 
 [tui.model_availability_nux]
 "gpt-5.5" = 4
