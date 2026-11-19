@@ -27,6 +27,16 @@ To auto-start a script on Windows:
 
 To use original function keys (`F5`, `F6`, `F10`, `F11`, `F12`) that are rebound, hold `Shift` while pressing them.
 
+### Linux (KDE Plasma 6)
+`RoyalKludgeRKS70.kde.sh` ports `RoyalKludgeRKS70.ahk` to Plasma global shortcuts, with the same Alt+1..9, Alt+0, Alt+- and Alt+= layout:
+
+```bash
+bash ./RoyalKludgeRKS70.kde.sh            # apply (safe to re-run)
+bash ./RoyalKludgeRKS70.kde.sh --remove   # undo
+```
+
+Volume and media keys are added on top of Plasma's own actions, so they show the normal OSD. Alt+1..5 are hidden `rks70-*.desktop` launchers in `~/.local/share/applications`. Global shortcuts take priority over apps, so Alt+1..9 no longer switch tabs in Firefox or Konsole on Linux.
+
 ## Shared Bash Folder
 Common environment files live under `bash/` and can be installed separately by running:
 
