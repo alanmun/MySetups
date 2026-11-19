@@ -157,7 +157,7 @@ if $is_msys2; then
 fi
 
 # -------------------------
-# Ubuntu Linux / WSL only
+# Linux only (Ubuntu under WSL, native Fedora)
 # -------------------------
 if $is_linux && ! $is_msys2; then
   # If not running interactively, stop here for Linux shells
@@ -236,13 +236,35 @@ if $is_linux && ! $is_msys2; then
   [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
   [ -s "$NVM_DIR/bash_completion" ] && . "$NVM_DIR/bash_completion"
 
-  # WSL integration
-  export BROWSER="wslview"
+  # The `open` npm package (v8, used by serverless-better-credentials for the AWS SSO
+  # login page) runs its own bundled xdg-open, which predates KDE 6 and silently opens
+  # nothing. Making it non-executable sends `open` to the system xdg-open instead.
+  # npm restores the bit on every install, so redo it after each one.
+  if ! $is_wsl; then
+    npm() {
+      command npm "$@"
+      local status=$? root
+      case "${1:-}" in
+        i|install|ci|update|up|add)
+          root="$PWD"
+          while [ "$root" != / ] && [ ! -f "$root/package.json" ]; do root="$(dirname "$root")"; done
+          [ -d "$root/node_modules" ] && find "$root/node_modules" -path '*/open/xdg-open' -perm -u+x -exec chmod -x {} + 2>/dev/null
+          ;;
+      esac
+      return $status
+    }
+  fi
+
+  # Editors and config home
   export XDG_CONFIG_HOME="$HOME/.config"
   export EDITOR="code --wait"
   export GIT_EDITOR="nvim"
 
   if $is_wsl; then
+    # wslview opens links in the Windows browser and only exists under WSL. On a
+    # native Linux desktop BROWSER stays unset so xdg-open picks the real browser.
+    export BROWSER="wslview"
+
     # `code` inside WSL is a thin client that talks to the VS Code extension host
     # over a unix socket named by VSCODE_IPC_HOOK_CLI. Two things rot that value:
     #
@@ -340,7 +362,14 @@ if $is_linux && ! $is_msys2; then
 
   # The three below exist for Troutwood app development
   # jdk 17 — the gradle wrapper (9.3.1) and the maestro cli both need it
-  [ -d /usr/lib/jvm/java-17-openjdk-amd64 ] && export JAVA_HOME="/usr/lib/jvm/java-17-openjdk-amd64"
+  # Debian/Ubuntu and Fedora name the JDK 17 directory differently.
+  for _jdk in /usr/lib/jvm/java-17-openjdk-amd64 /usr/lib/jvm/java-17-openjdk /usr/lib/jvm/temurin-17-jdk; do
+    if [ -d "$_jdk" ]; then
+      export JAVA_HOME="$_jdk"
+      break
+    fi
+  done
+  unset _jdk
 
   # android sdk — adb, sdkmanager. USB is invisible to WSL2 under NAT networking, so the
   # device is attached over wireless debugging: adb pair, adb connect, then
@@ -384,3 +413,23 @@ fi
 # helpme
 [ -f "$HOME/.config/helpme/helpme.bash" ] && source "$HOME/.config/helpme/helpme.bash"
 export BUILDX_NO_DEFAULT_ATTESTATIONS=1
+
+# -------------------------
+# Ctrl+V pastes at the prompt (native Linux on Wayland)
+# -------------------------
+# Linux terminals send Ctrl+V to the shell, where readline treats it as
+# "insert the next key literally"; paste is Ctrl+Shift+V. Windows terminals
+# paste on Ctrl+V themselves, so WSL never needed this. Multi-line clipboard
+# text is inserted without being run.
+if $is_linux && ! $is_wsl && [ -n "${WAYLAND_DISPLAY:-}" ] && command -v wl-paste >/dev/null 2>&1; then
+  _paste_clipboard_at_cursor() {
+    local clip
+    clip="$(wl-paste --no-newline 2>/dev/null)" || return 0
+    READLINE_LINE="${READLINE_LINE:0:READLINE_POINT}${clip}${READLINE_LINE:READLINE_POINT}"
+    READLINE_POINT=$((READLINE_POINT + ${#clip}))
+  }
+  # Readline otherwise re-binds the terminal's own "literal next" key (Ctrl+V)
+  # before every prompt, which would undo the binding below.
+  bind 'set bind-tty-special-chars off'
+  bind -x '"\C-v": _paste_clipboard_at_cursor'
+fi
