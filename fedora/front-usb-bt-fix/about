@@ -1,0 +1,2 @@
+Rebind chipset xHCI 0000:0b:00.0 at boot if the Xbox dongle wedged it and took Bluetooth down
+machine: xbox720

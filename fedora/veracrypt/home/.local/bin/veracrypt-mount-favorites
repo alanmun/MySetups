@@ -1,0 +1,5 @@
+#!/bin/sh
+# Started by the KDE shortcut Ctrl+Shift+1.
+# A command-line start does not read the saved VeraCrypt preferences, so the
+# "force" file system option must be passed here.
+exec /usr/bin/veracrypt --load-preferences --fs-options=force --auto-mount=favorites

@@ -1,0 +1,16 @@
+[Unit]
+Description=Dismount all VeraCrypt volumes on logout and shutdown
+# Stops when the login of user @UID@ ends, and at shutdown before disks unmount.
+After=user@@UID@.service local-fs.target
+BindsTo=user@@UID@.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+Environment=HOME=/root
+ExecStart=/usr/bin/true
+ExecStop=/usr/local/sbin/veracrypt-dismount-all
+TimeoutStopSec=30
+
+[Install]
+WantedBy=user@@UID@.service

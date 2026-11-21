@@ -1,0 +1,4 @@
+com.discordapp.Discord
+com.spotify.Client
+com.xnview.XnViewMP
+org.waywallen.waywallen

@@ -1,0 +1,23 @@
+#!/usr/bin/bash
+# Started by the KDE shortcut Ctrl+Shift+2.
+# Acts only on a double press: the second press must come 0.1 s to 1 s after
+# the first. Then it stops every program that holds a VeraCrypt volume and
+# dismounts all volumes, with no questions.
+stamp="${XDG_RUNTIME_DIR:-/tmp}/vc-force-dismount.stamp"
+now=$(date +%s%3N)
+last=$(cat "$stamp" 2>/dev/null || echo 0)
+diff=$((now - last))
+
+if ((diff < 100)); then
+    exit 0                      # too fast: key bounce, ignore
+elif ((diff > 1000)); then
+    echo "$now" > "$stamp"      # first press: remember the time
+    exit 0
+fi
+
+rm -f "$stamp"
+if sudo -n /usr/local/sbin/veracrypt-dismount-all >/dev/null 2>&1; then
+    notify-send -i veracrypt -t 3000 "VeraCrypt" "All volumes are dismounted."
+else
+    notify-send -i dialog-error "VeraCrypt" "Dismount failed."
+fi

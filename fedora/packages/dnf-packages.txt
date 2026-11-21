@@ -1,0 +1,52 @@
+# Installed on xbox720 (2026-11-16 to 11-20). One package per line; # comments ok.
+# CLI / dev
+git
+gh
+tmux
+neovim
+jq
+ripgrep
+fzf
+fd-find
+bat
+htop
+tree
+cmake
+gcc
+gcc-c++
+make
+clang
+golang
+unzip
+zip
+wget
+curl
+rsync
+postgresql
+uv
+pipx
+python3-pip
+awscli2
+ShellCheck
+graphviz
+ImageMagick
+libatomic
+wl-clipboard
+xclip
+# apps
+code
+steam
+discord
+docker-ce
+docker-ce-cli
+containerd.io
+docker-buildx-plugin
+docker-compose-plugin
+mullvad-vpn
+syncthing
+# xone build deps (see xone/README.md)
+dkms
+bsdtar
+# Windows-disk tools
+hivex
+qemu-img

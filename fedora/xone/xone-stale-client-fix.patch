@@ -1,0 +1,231 @@
+--- /usr/src/xone-0.5.8/transport/dongle.c	2026-11-17 11:46:54.387368186 -0500
++++ transport/dongle.c	2026-11-20 16:04:13.643924823 -0500
+@@ -36,6 +36,10 @@
+ #define XONE_DONGLE_FW_REQ_TIMEOUT_MS 3000
+ #define XONE_DONGLE_FW_REQ_RETRIES 11 // 30 seconds
+ #define XONE_DONGLE_FW_LOAD_RETRIES 3
++/* a client must send data within this time after its association */
++#define XONE_DONGLE_HANDSHAKE_TIMEOUT msecs_to_jiffies(5000)
++/* repeated association requests inside this window are retransmissions */
++#define XONE_DONGLE_REASSOC_GUARD msecs_to_jiffies(1000)
+ 
+ enum xone_dongle_queue {
+ 	XONE_DONGLE_QUEUE_DATA = 0x00,
+@@ -60,6 +64,10 @@
+ 	u8 address[ETH_ALEN];
+ 	bool encryption_enabled;
+ 
++	/* time of the association and whether any data arrived since */
++	unsigned long assoc_time;
++	bool seen_data;
++
+ 	struct gip_adapter *adapter;
+ };
+ 
+@@ -105,6 +113,8 @@
+ 
+ 	struct workqueue_struct *event_wq;
+ 	struct work_struct load_fw_work;
++	/* removes clients that never completed the handshake (runs on event_wq) */
++	struct delayed_work reap_work;
+ 
+ 	enum xone_dongle_fw_state fw_state;
+ 	u16 vendor;
+@@ -113,6 +123,7 @@
+ 
+ static int xone_dongle_power_off_client(struct xone_dongle *dongle, int index, bool silent);
+ static int xone_dongle_power_off_clients(struct xone_dongle *dongle);
++static int xone_dongle_remove_client(struct xone_dongle *dongle, u8 wcid);
+ 
+ static u8 xone_dongle_find_channel_idx(struct xone_dongle *dongle)
+ {
+@@ -499,6 +510,7 @@
+ 
+ 	client->dongle = dongle;
+ 	client->wcid = i + 1;
++	client->assoc_time = jiffies;
+ 	memcpy(client->address, addr, ETH_ALEN);
+ 
+ 	client->adapter = gip_create_adapter(dongle->mt.dev,
+@@ -514,18 +526,104 @@
+ 	return client;
+ }
+ 
++/*
++ * Remove clients that associated but never sent any data. Spurious
++ * association frames (channel scan, foreign devices) create such clients.
++ * They never go away on their own, and each one keeps a slot and stops the
++ * pairing channel scan. Must run on event_wq.
++ * Returns true if a client is still inside its handshake window.
++ */
++static bool xone_dongle_reap_clients(struct xone_dongle *dongle)
++{
++	struct xone_dongle_client *client;
++	bool pending = false;
++	int i;
++
++	for (i = 0; i < XONE_DONGLE_MAX_CLIENTS; i++) {
++		client = dongle->clients[i];
++		if (!client || READ_ONCE(client->seen_data))
++			continue;
++
++		if (time_before(jiffies, client->assoc_time +
++					 XONE_DONGLE_HANDSHAKE_TIMEOUT)) {
++			pending = true;
++			continue;
++		}
++
++		dev_dbg(dongle->mt.dev, "%s: wcid=%d sent no data, removing\n",
++			__func__, client->wcid);
++		xone_dongle_remove_client(dongle, client->wcid);
++	}
++
++	return pending;
++}
++
++static void xone_dongle_reap_work(struct work_struct *work)
++{
++	struct xone_dongle *dongle = container_of(to_delayed_work(work),
++						  typeof(*dongle),
++						  reap_work);
++
++	if (dongle->fw_state != XONE_DONGLE_FW_STATE_READY)
++		return;
++
++	if (xone_dongle_reap_clients(dongle))
++		queue_delayed_work(dongle->event_wq, &dongle->reap_work,
++				   XONE_DONGLE_HANDSHAKE_TIMEOUT);
++}
++
++/* Remove every client without waiting for the controllers. */
++static void xone_dongle_drop_clients(struct xone_dongle *dongle)
++{
++	int i;
++
++	for (i = 0; i < XONE_DONGLE_MAX_CLIENTS; i++)
++		if (dongle->clients[i])
++			xone_dongle_remove_client(dongle, i + 1);
++
++	atomic_set(&dongle->client_count, 0);
++}
++
++/* Stop the event queue. No client changes can run after this returns. */
++static void xone_dongle_quiesce_events(struct xone_dongle *dongle)
++{
++	cancel_delayed_work_sync(&dongle->reap_work);
++	drain_workqueue(dongle->event_wq);
++	/* an event that ran during the drain can have armed it again */
++	cancel_delayed_work_sync(&dongle->reap_work);
++}
++
+ static int xone_dongle_add_client(struct xone_dongle *dongle, u8 *addr)
+ {
+ 	struct xone_dongle_client *client;
+ 	int i, err;
+ 	unsigned long flags;
+ 
+-	/* reject duplicate: controller already has a WCID slot */
+-	for (i = 0; i < XONE_DONGLE_MAX_CLIENTS; i++)
+-		if (dongle->clients[i] &&
+-		    ether_addr_equal(dongle->clients[i]->address, addr))
++	xone_dongle_reap_clients(dongle);
++
++	for (i = 0; i < XONE_DONGLE_MAX_CLIENTS; i++) {
++		client = dongle->clients[i];
++		if (!client || !ether_addr_equal(client->address, addr))
++			continue;
++
++		/* retransmitted request, the association is in progress */
++		if (time_before(jiffies, client->assoc_time +
++					 XONE_DONGLE_REASSOC_GUARD))
+ 			return 0;
+ 
++		/*
++		 * A controller only sends an association request when it is
++		 * not associated. The slot is stale, for example because the
++		 * disconnect was lost during suspend. Ignoring the request
++		 * here locks the controller out until the driver is reloaded,
++		 * so remove the old slot and associate again.
++		 */
++		dev_dbg(dongle->mt.dev, "%s: wcid=%d is stale, replacing\n",
++			__func__, client->wcid);
++		xone_dongle_remove_client(dongle, client->wcid);
++		break;
++	}
++
+ 	client = xone_dongle_create_client(dongle, addr);
+ 	if (IS_ERR(client))
+ 		return PTR_ERR(client);
+@@ -549,6 +647,9 @@
+ 
+ 	atomic_inc(&dongle->client_count);
+ 
++	mod_delayed_work(dongle->event_wq, &dongle->reap_work,
++			 XONE_DONGLE_HANDSHAKE_TIMEOUT + HZ / 10);
++
+ 	return 0;
+ 
+ err_free_client:
+@@ -711,6 +812,7 @@
+ 		 */
+ 		if (dongle->pairing)
+ 			dongle->last_wlan_rx = jiffies;
++		WRITE_ONCE(client->seen_data, true);
+ 		err = gip_process_buffer(client->adapter, skb->data, skb->len);
+ 	}
+ 
+@@ -1263,7 +1365,10 @@
+ 	usb_kill_anchored_urbs(&dongle->urbs_in_busy);
+ 	/* cancel fw load before destroying workqueues to avoid use-after-free */
+ 	cancel_work_sync(&dongle->load_fw_work);
++	cancel_delayed_work_sync(&dongle->reap_work);
+ 	destroy_workqueue(dongle->event_wq);
++	/* an event that ran during the destroy can have armed it again */
++	cancel_delayed_work_sync(&dongle->reap_work);
+ 	cancel_delayed_work_sync(&dongle->pairing_work);
+ 	cancel_delayed_work_sync(&dongle->pairing_scan_work);
+ 
+@@ -1315,6 +1420,7 @@
+ 	INIT_DELAYED_WORK(&dongle->pairing_work, xone_dongle_pairing_timeout);
+ 	INIT_DELAYED_WORK(&dongle->pairing_scan_work, xone_dongle_pairing_scan);
+ 	INIT_WORK(&dongle->load_fw_work, xone_dongle_fw_load);
++	INIT_DELAYED_WORK(&dongle->reap_work, xone_dongle_reap_work);
+ 	spin_lock_init(&dongle->clients_lock);
+ 	init_waitqueue_head(&dongle->disconnect_wait);
+ 
+@@ -1378,10 +1484,24 @@
+ 
+ 	err = xone_dongle_power_off_clients(dongle);
+ 	if (err)
+-		dev_err(dongle->mt.dev, "%s: power off failed: %d\n",
+-			__func__, err);
++		dev_warn(dongle->mt.dev,
++			 "%s: power off failed: %d, dropping clients\n",
++			 __func__, err);
+ 
++	/*
++	 * No client survives the suspend. A client that did not confirm the
++	 * power off must not keep its slot: after resume the slot would be
++	 * stale and would lock the controller out.
++	 */
+ 	usb_kill_anchored_urbs(&dongle->urbs_in_busy);
++	xone_dongle_quiesce_events(dongle);
++	xone_dongle_drop_clients(dongle);
++
++	err = xone_dongle_toggle_pairing(dongle, false);
++	if (err)
++		dev_dbg(dongle->mt.dev, "%s: disable pairing failed: %d\n",
++			__func__, err);
++
+ 	usb_kill_anchored_urbs(&dongle->urbs_out_busy);
+ 	cancel_delayed_work_sync(&dongle->pairing_work);
+ 	cancel_delayed_work_sync(&dongle->pairing_scan_work);
+@@ -1512,7 +1632,7 @@
+ 	 * new URBs before cancel_work_sync returned, kill them now.
+ 	 */
+ 	usb_kill_anchored_urbs(&dongle->urbs_in_busy);
+-	drain_workqueue(dongle->event_wq);
++	xone_dongle_quiesce_events(dongle);
+ 	cancel_delayed_work_sync(&dongle->pairing_work);
+ 	cancel_delayed_work_sync(&dongle->pairing_scan_work);
+ 

@@ -1,0 +1,11 @@
+[Unit]
+Description=Restart waywallen if its login wallpaper restore hit the display-ID race
+After=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/waywallen-recall-fix.sh
+
+[Install]
+WantedBy=graphical-session.target

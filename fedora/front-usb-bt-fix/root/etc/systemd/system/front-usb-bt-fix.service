@@ -1,0 +1,7 @@
+[Unit]
+Description=Rebind chipset USB controller if Xbox dongle wedged it (restores Bluetooth)
+After=bluetooth.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/front-usb-bt-fix.sh

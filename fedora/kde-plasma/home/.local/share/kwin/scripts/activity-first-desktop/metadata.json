@@ -1,0 +1,12 @@
+{
+    "KPackageStructure": "KWin/Script",
+    "X-Plasma-API": "javascript",
+    "X-Plasma-MainScript": "code/main.js",
+    "KPlugin": {
+        "Id": "activity-first-desktop",
+        "Name": "Scratch Activity Starts on First Desktop",
+        "Description": "Switches to the leftmost virtual desktop each time the Scratch Activity becomes active.",
+        "Version": "1.0",
+        "License": "MIT"
+    }
+}

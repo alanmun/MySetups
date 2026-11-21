@@ -1,0 +1,2 @@
+Load xpad at boot for the 8BitDo 2.4GHz dongle (2dc8:3106) - currently ineffective, see README
+machine: 8BitDo dongle

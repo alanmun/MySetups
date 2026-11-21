@@ -1,0 +1,14 @@
+[Unit]
+Description=Unload the Xbox adapter driver cleanly at shutdown and restart
+# Workaround from dlundqvist/xone issue #227: leaves the adapter in a clean
+# state so that the next boot can start it without a replug.
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/true
+ExecStop=-/usr/bin/modprobe -r xone_dongle
+TimeoutStopSec=20
+
+[Install]
+WantedBy=multi-user.target

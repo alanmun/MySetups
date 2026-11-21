@@ -1,0 +1,2 @@
+Xbox Wireless Adapter: blacklist xpad/mt76x2u, unload xone cleanly at shutdown (xone DKMS itself is manual, see README)
+machine: needs the xone DKMS driver

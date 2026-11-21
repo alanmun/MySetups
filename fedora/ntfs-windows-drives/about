@@ -1,0 +1,1 @@
+Mount NTFS (Windows drives, VeraCrypt volumes) with ntfs3 nocase,windows_names; keep plocate out of /mnt

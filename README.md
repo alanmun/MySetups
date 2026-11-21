@@ -5,6 +5,7 @@ Personal setup repo for:
 - Shared Codex config profiles
 - Audited and commit-pinned Herdr plugins
 - Shared agent skills for Codex and Claude Code
+- Fedora tweaks, each with the reason it exists (`fedora/`)
 
 Run the full setup with:
 
@@ -36,6 +37,16 @@ bash ./RoyalKludgeRKS70.kde.sh --remove   # undo
 ```
 
 Volume and media keys are added on top of Plasma's own actions, so they show the normal OSD. Alt+1..5 are hidden `rks70-*.desktop` launchers in `~/.local/share/applications`. Global shortcuts take priority over apps, so Alt+1..9 no longer switch tabs in Firefox or Konsole on Linux.
+
+## Fedora
+`fedora/` holds every change made to the Fedora installs, as installable components, each with a README that records why it exists, what was tried, and its status. It isn't part of `install.sh` because it needs sudo and picks components per machine:
+
+```bash
+bash ./fedora/install.sh             # list components
+bash ./fedora/install.sh --status    # drift between repo and this machine
+```
+
+See `fedora/README.md`. Agents follow the `modifying-users-fedora` skill to keep it current.
 
 ## Shared Bash Folder
 Common environment files live under `bash/` and can be installed separately by running:

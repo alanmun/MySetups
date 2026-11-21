@@ -1,0 +1,54 @@
+#!/usr/bin/bash
+# Finishes a forced VeraCrypt dismount.
+# After a forced dismount, a volume can stay detached but still held open by
+# a program. This service stops those programs, so that Linux can close the
+# decrypted device. It reads device state and process IDs only, never the
+# contents of a volume.
+
+# Print the PIDs that hold a file or folder on block device major $1, minor $2.
+holders() {
+    local d=$(( ($1 << 8) | ($2 & 0xff) | (($2 & ~0xff) << 12) ))
+    {
+        # Working folder, root folder and open files of each process.
+        # (-maxdepth 0 and -mindepth 1 make sure that only the links themselves
+        # are examined, never the items inside a folder.)
+        {
+            find -L /proc/[0-9]*/cwd /proc/[0-9]*/root -maxdepth 0 -printf '%D %p\n' 2>/dev/null
+            find -L /proc/[0-9]*/fd -mindepth 1 -maxdepth 1 -printf '%D %p\n' 2>/dev/null
+        } | awk -v d="$d" '$1 == d {split($2, a, "/"); print a[3]}'
+        # Files mapped into memory.
+        grep -l -s " $(printf '%02x:%02x' "$1" "$2") " /proc/[0-9]*/maps | cut -d/ -f3
+    } | sort -u
+}
+
+check() {
+    local name open major minor sig pids
+    sleep 1   # let a normal dismount finish first
+    for name in $(dmsetup ls --target crypt 2>/dev/null | awk '$1 ~ /^veracrypt[0-9]+$/ {print $1}'); do
+        # Still mounted: a normal volume in use. Leave it alone.
+        findmnt -rno SOURCE | grep -qx "/dev/mapper/$name" && continue
+        open=$(dmsetup info -c --noheadings -o open "$name" 2>/dev/null)
+        [[ ${open:-0} -gt 0 ]] || continue
+        IFS=: read -r major minor < <(dmsetup info -c --noheadings -o major,minor "$name" 2>/dev/null)
+        [[ -n $major && -n $minor ]] || continue
+        for sig in TERM KILL; do
+            mapfile -t pids < <(holders "$major" "$minor")
+            ((${#pids[@]})) || break
+            echo "$name is detached but held by PIDs: ${pids[*]}. Sending $sig."
+            kill -"$sig" "${pids[@]}" 2>/dev/null || true
+            sleep 1
+        done
+    done
+}
+
+# Test mode: only print the holders of a device. Stops nothing.
+if [[ $1 == --holders ]]; then
+    holders "$2" "$3"
+    exit 0
+fi
+
+check
+# One line arrives for each unmount on the system. No polling.
+findmnt --poll=umount -rn -o TARGET | while read -r _; do
+    check
+done

@@ -1,0 +1,344 @@
+#!/usr/bin/env bash
+# One-time setup after creating your Fedora user. Run it as that user (not root):
+#
+#   finish-wsl-carryover
+#
+# It moves the files staged from WSL into your home folder, fixes paths that
+# still say /home/alanmun, runs MySetups, and installs the per-user tools
+# (nvm + Node, Codex CLI, Claude Code). It also sets up Syncthing for the
+# Obsidian vault and registers the staged ComfyUI container data with Docker.
+# Every step is safe to re-run.
+
+set -uo pipefail
+
+STAGE="${CARRYOVER_STAGE:-/home/wsl-carryover}"
+COMFY_STAGE="${CARRYOVER_COMFY_STAGE:-/var/lib/comfy-carryover}"
+OLD_HOME="/home/alanmun"
+LOG="$HOME/finish-wsl-carryover.log"
+SKIP_SUDO="${CARRYOVER_SKIP_SUDO:-0}"   # test hook: skip steps that need root
+
+declare -a RESULTS=()
+
+if [ "$(id -u)" = 0 ]; then
+  echo "Run this as your normal user, not root." >&2
+  exit 1
+fi
+
+exec > >(tee -a "$LOG") 2>&1
+echo "=== finish-wsl-carryover $(date) user=$USER home=$HOME ==="
+
+step() {
+  # step "label" function
+  local label="$1" fn="$2"
+  echo
+  echo "--- $label"
+  if "$fn"; then
+    RESULTS+=("OK    $label")
+  else
+    RESULTS+=("FAIL  $label")
+  fi
+}
+
+as_root() {
+  if [ "$SKIP_SUDO" = 1 ]; then
+    echo "(skipping root step: $*)"
+    return 0
+  fi
+  sudo "$@"
+}
+
+# Move one staged entry into $HOME. Directories that exist on both sides are
+# merged; a file that already exists is kept as <name>.fedora-default.
+merge_entry() {
+  local src="$1" dest="$2" name
+  if [ ! -e "$dest" ] && [ ! -L "$dest" ]; then
+    mv "$src" "$dest"
+    return
+  fi
+  if [ -d "$src" ] && [ ! -L "$src" ] && [ -d "$dest" ] && [ ! -L "$dest" ]; then
+    shopt -s dotglob nullglob
+    local child
+    for child in "$src"/*; do
+      name="$(basename "$child")"
+      merge_entry "$child" "$dest/$name" || return 1
+    done
+    shopt -u dotglob nullglob
+    rmdir "$src" 2>/dev/null || true
+    return
+  fi
+  mv -f "$dest" "$dest.fedora-default"
+  mv "$src" "$dest"
+}
+
+move_home_files() {
+  if [ ! -d "$STAGE/home" ]; then
+    echo "Nothing staged at $STAGE/home (already moved?)."
+    return 0
+  fi
+  as_root chown -R "$(id -u):$(id -g)" "$STAGE/home" || return 1
+  shopt -s dotglob nullglob
+  local entry rc=0
+  for entry in "$STAGE/home"/*; do
+    merge_entry "$entry" "$HOME/$(basename "$entry")" || rc=1
+  done
+  shopt -u dotglob nullglob
+  rmdir "$STAGE/home" 2>/dev/null || true
+  chmod 700 "$HOME/.ssh" 2>/dev/null || true
+  chmod 600 "$HOME"/.ssh/id_* 2>/dev/null || true
+  chmod 644 "$HOME"/.ssh/*.pub 2>/dev/null || true
+  return $rc
+}
+
+fix_paths() {
+  if [ "$HOME" = "$OLD_HOME" ]; then
+    echo "Home is still $OLD_HOME; no paths to rewrite."
+    return 0
+  fi
+  local f
+  # Plain config files that record absolute home paths.
+  for f in "$HOME/.gitconfig" "$HOME/.claude.json" "$HOME/.claude-personal/.claude.json" \
+           "$HOME/.claude/settings.json" "$HOME/.claude-personal/settings.json" \
+           "$HOME/.claude-openrouter/plugins/known_marketplaces.json" \
+           "$HOME/.codex/config.toml" "$HOME/.codex/hooks.json" \
+           "$HOME/.config/herdr/plugins.json" "$HOME/.config/herdr/session.json" \
+           "$HOME/.config/uv/uv-receipt.json" \
+           "$HOME/.aider.conf.yml" "$HOME/.serverlessrc"; do
+    if [ -f "$f" ] && [ ! -L "$f" ]; then
+      sed -i "s|$OLD_HOME/|$HOME/|g; s|$OLD_HOME\"|$HOME\"|g" "$f"
+    fi
+  done
+  # Absolute symlinks into the old home (for example Claude skills that live in a repo).
+  local target
+  while IFS= read -r -d '' f; do
+    target="$(readlink "$f")"
+    case "$target" in
+      "$OLD_HOME"/*) ln -sfn "$HOME/${target#"$OLD_HOME"/}" "$f" ;;
+    esac
+  done < <(find "$HOME/.claude" "$HOME/.claude-personal" "$HOME/.codex" "$HOME/.config" "$HOME/.local/bin" \
+             -maxdepth 3 -type l -print0 2>/dev/null)
+  # Git worktrees point at each other with absolute paths.
+  while IFS= read -r -d '' f; do
+    sed -i "s|$OLD_HOME/|$HOME/|g" "$f"
+  done < <(find "$HOME/Repositories" "$HOME/.herdr" -maxdepth 6 \
+             \( -type f -name .git -o -type f -path '*/.git/worktrees/*/gitdir' \) -print0 2>/dev/null)
+  # Claude Code keys per-project state by the project path with slashes as dashes.
+  local old_key new_key d base
+  old_key="$(printf '%s' "$OLD_HOME" | tr '/' '-')"
+  new_key="$(printf '%s' "$HOME" | tr '/' '-')"
+  for d in "$HOME/.claude/projects" "$HOME/.claude-personal/projects"; do
+    [ -d "$d" ] || continue
+    for f in "$d/$old_key"*; do
+      [ -e "$f" ] || continue
+      base="$(basename "$f")"
+      [ -e "$d/${base/#$old_key/$new_key}" ] || mv "$f" "$d/${base/#$old_key/$new_key}"
+    done
+  done
+  return 0
+}
+
+system_bits() {
+  as_root usermod -aG docker "$USER" || return 1
+  as_root restorecon -RF "$HOME" >/dev/null 2>&1 || true
+  return 0
+}
+
+run_mysetups() {
+  local repo="$HOME/Repositories/MySetups"
+  if [ ! -f "$repo/install.sh" ]; then
+    echo "MySetups not found at $repo."
+    return 1
+  fi
+  export PATH="$HOME/.local/bin:$PATH"
+  bash "$repo/install.sh"
+}
+
+install_node() {
+  export NVM_DIR="$HOME/.nvm"
+  if [ ! -s "$NVM_DIR/nvm.sh" ]; then
+    # PROFILE=/dev/null keeps the installer from editing ~/.bashrc, which is a
+    # symlink into MySetups and already loads nvm.
+    curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | PROFILE=/dev/null bash || return 1
+  fi
+  # nvm is not written for `set -u`.
+  set +u
+  # shellcheck disable=SC1091
+  . "$NVM_DIR/nvm.sh" || { set -u; return 1; }
+  # The newest LTS line. Plain `nvm install node` can pick an alpha build.
+  nvm install --lts || { set -u; return 1; }
+  nvm alias default 'lts/*'
+  set -u
+  node -v
+  local pkgs=() line
+  if [ -f "$STAGE/npm-globals.txt" ]; then
+    while IFS= read -r line; do
+      [ -n "$line" ] && pkgs+=("$line")
+    done < "$STAGE/npm-globals.txt"
+  else
+    pkgs=("@openai/codex")
+  fi
+  npm install -g "${pkgs[@]}" || return 1
+  rm -f "$STAGE/npm-globals.txt"
+  codex --version
+}
+
+install_claude() {
+  if [ -x "$HOME/.local/bin/claude" ]; then
+    echo "Claude Code already installed: $("$HOME/.local/bin/claude" --version 2>/dev/null)"
+    return 0
+  fi
+  curl -fsSL https://claude.ai/install.sh | bash || return 1
+  "$HOME/.local/bin/claude" --version
+}
+
+setup_comfy() {
+  if [ ! -d "$COMFY_STAGE" ]; then
+    echo "No ComfyUI data staged at $COMFY_STAGE (already set up?)."
+    return 0
+  fi
+  if [ "$SKIP_SUDO" = 1 ]; then
+    echo "(skipping ComfyUI setup: needs root and a running Docker)"
+    return 0
+  fi
+  sudo systemctl start docker || return 1
+  if [ -f "$COMFY_STAGE/comfyui-image.tar" ]; then
+    sudo docker load -i "$COMFY_STAGE/comfyui-image.tar" || return 1
+    sudo rm -f "$COMFY_STAGE/comfyui-image.tar"
+  fi
+  if [ -d "$COMFY_STAGE/storage" ]; then
+    local data
+    sudo docker volume create comfy_storage >/dev/null || return 1
+    data="$(sudo docker volume inspect -f '{{.Mountpoint}}' comfy_storage)" || return 1
+    if [ -n "$(sudo ls -A "$data" 2>/dev/null)" ]; then
+      echo "Docker volume comfy_storage already has data; leaving $COMFY_STAGE/storage where it is."
+      return 1
+    fi
+    sudo rmdir "$data" && sudo mv "$COMFY_STAGE/storage" "$data" || return 1
+    sudo restorecon -RF "$data" >/dev/null 2>&1 || true
+  fi
+  if [ -d "$COMFY_STAGE/Comfy-Container" ]; then
+    mkdir -p "$HOME/Repositories/ss2"
+    if [ ! -e "$HOME/Repositories/ss2/Comfy-Container" ]; then
+      sudo mv "$COMFY_STAGE/Comfy-Container" "$HOME/Repositories/ss2/Comfy-Container" || return 1
+      sudo chown -R "$(id -u):$(id -g)" "$HOME/Repositories/ss2"
+    fi
+  fi
+  sudo rmdir "$COMFY_STAGE" 2>/dev/null || true
+  echo "ComfyUI: start it with  ~/Repositories/ss2/Comfy-Container/run-linux"
+  return 0
+}
+
+setup_syncthing() {
+  local peers="$STAGE/syncthing-peers.json"
+  if ! command -v syncthing >/dev/null 2>&1; then
+    echo "syncthing is not installed."
+    return 1
+  fi
+  if [ ! -f "$peers" ]; then
+    echo "No Syncthing peer list staged at $peers (already set up?)."
+    return 0
+  fi
+  local have_user_systemd=0 cfg
+  if systemctl --user show-environment >/dev/null 2>&1; then
+    have_user_systemd=1
+    systemctl --user stop syncthing.service 2>/dev/null || true
+  fi
+  cfg="$(syncthing paths 2>/dev/null | grep -m1 -oE '/[^[:space:]]*config\.xml')"
+  if [ -z "$cfg" ]; then
+    echo "Could not work out where Syncthing keeps its config."
+    return 1
+  fi
+  if [ ! -f "$cfg" ]; then
+    # Creates this machine's own device identity. It is a new device, not a
+    # copy of the Windows one, so the other devices have to accept it once.
+    syncthing generate >/dev/null || return 1
+  fi
+  python3 - "$cfg" "$peers" <<'PY' || return 1
+import json, os, secrets, sys, time
+import xml.etree.ElementTree as ET
+
+cfg, peers_path = sys.argv[1:3]
+peers = json.load(open(peers_path))
+tree = ET.parse(cfg)
+root = tree.getroot()
+
+known = {d.get("id") for d in root.findall("device")}
+for p in peers.get("devices", []):
+    if p["id"] in known:
+        continue
+    d = ET.SubElement(root, "device", id=p["id"], name=p["name"], compression="metadata")
+    for a in p.get("addresses", ["dynamic"]):
+        ET.SubElement(d, "address").text = a
+    print("added device:", p["name"])
+
+have = {f.get("id") for f in root.findall("folder")}
+for f in peers.get("folders", []):
+    path = os.path.expanduser(f["path"])
+    # Syncthing refuses to run a folder without its marker directory.
+    os.makedirs(os.path.join(path, ".stfolder"), exist_ok=True)
+    if f["id"] in have:
+        continue
+    e = ET.SubElement(root, "folder", id=f["id"], label=f["label"], path=path,
+                      type=f.get("type", "sendreceive"), rescanIntervalS="3600",
+                      fsWatcherEnabled="true", fsWatcherDelayS="10")
+    for dev in f.get("devices", []):
+        ET.SubElement(e, "device", id=dev)
+    print("added folder:", f["label"], "->", path)
+tree.write(cfg, encoding="unicode")
+
+# Tell Obsidian where the vault is, unless it already has a vault list.
+vaults = [os.path.expanduser(v) for v in peers.get("obsidian_vaults", [])]
+ob = os.path.expanduser("~/.config/obsidian/obsidian.json")
+if vaults and not os.path.exists(ob):
+    os.makedirs(os.path.dirname(ob), exist_ok=True)
+    now = int(time.time() * 1000)
+    data = {"vaults": {secrets.token_hex(8): {"path": v, "ts": now, "open": i == 0}
+                       for i, v in enumerate(vaults)}}
+    json.dump(data, open(ob, "w"))
+    print("registered Obsidian vault(s):", ", ".join(vaults))
+PY
+  if [ "$have_user_systemd" = 1 ]; then
+    systemctl --user enable --now syncthing.service || return 1
+  else
+    echo "(no user systemd session here; start it later with: systemctl --user enable --now syncthing.service)"
+  fi
+  rm -f "$peers"
+  echo "This machine's Syncthing device ID:"
+  syncthing device-id
+  echo "On your other Syncthing devices, accept this new device and share the folder with it."
+  echo "Syncthing's page on this machine: http://127.0.0.1:8384"
+  return 0
+}
+
+# With no arguments every step runs. To re-run just some, name them, for example:
+#   finish-wsl-carryover setup_syncthing
+ONLY=" $* "
+if [ "$ONLY" != "  " ]; then
+  step() {
+    case "$ONLY" in
+      *" $2 "*) ;;
+      *) return 0 ;;
+    esac
+    local label="$1" fn="$2"
+    echo
+    echo "--- $label"
+    if "$fn"; then RESULTS+=("OK    $label"); else RESULTS+=("FAIL  $label"); fi
+  }
+fi
+
+step "Move staged WSL files into $HOME" move_home_files
+step "Rewrite $OLD_HOME paths for this user" fix_paths
+step "Docker group and file labels" system_bits
+step "MySetups install.sh" run_mysetups
+step "nvm, latest LTS Node, Codex CLI and other global npm tools" install_node
+step "Claude Code" install_claude
+step "Syncthing and the Obsidian vault" setup_syncthing
+step "ComfyUI container data" setup_comfy
+
+rmdir "$STAGE" 2>/dev/null || true
+
+echo
+echo "=== Summary ==="
+printf '%s\n' "${RESULTS[@]}"
+echo
+echo "Log: $LOG"
+echo "Open a new terminal (or log out and back in) so the new shell config and the docker group apply."

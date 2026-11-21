@@ -1,0 +1,8 @@
+[Unit]
+Description=Check front USB / Bluetooth health shortly after boot
+
+[Timer]
+OnBootSec=25s
+
+[Install]
+WantedBy=timers.target

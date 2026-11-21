@@ -1,0 +1,45 @@
+#!/usr/bin/bash
+# mount.ntfs3 - local helper (not from a package). mount.ntfs is a symlink to it.
+#
+# mount(8) runs this for every NTFS mount that uses the kernel ntfs3 driver,
+# whether the driver was named or auto-detected: the drives in /etc/fstab,
+# drives opened from the file manager, VeraCrypt volumes, `mount /dev/sdX /dir`.
+# It adds case-insensitive lookups (nocase) and Windows-safe file names
+# (windows_names) to the options and then does the real mount.
+#
+# Pass "case" in the options to get a case-sensitive mount for one volume.
+# To go back to stock behaviour: delete /usr/bin/mount.ntfs3 and /usr/bin/mount.ntfs.
+#
+# Called as: mount.ntfs3 <device> <mountpoint> [-sfnv] [-N ns] [-o options] [-t type]
+
+dev="$1"; mnt="$2"; shift 2
+opts=""; flags=()
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -o) opts="$2"; shift 2 ;;
+    -t) shift 2 ;;
+    -N) flags+=("-N" "$2"); shift 2 ;;
+    -*) flags+=("$1"); shift ;;
+    *)  shift ;;
+  esac
+done
+
+want_nocase=1
+out=()
+IFS=',' read -r -a parts <<< "$opts"
+for o in "${parts[@]}"; do
+  case "$o" in
+    "") ;;
+    case) want_nocase=0 ;;
+    nocase|ignore_case|windows_names) ;;                      # added back below
+    # ntfs-3g-only options that ntfs3 would reject
+    big_writes|norecover|recover|permissions|compression|nocompression|allow_other|default_permissions) ;;
+    locale=*|streams_interface=*|inherit|efs_raw|remove_hiberfile) ;;
+    *) out+=("$o") ;;
+  esac
+done
+[ "$want_nocase" = 1 ] && out+=("nocase")
+out+=("windows_names")
+
+joined="$(IFS=','; printf '%s' "${out[*]}")"
+exec /usr/bin/mount -i -t ntfs3 "${flags[@]}" -o "$joined" -- "$dev" "$mnt"

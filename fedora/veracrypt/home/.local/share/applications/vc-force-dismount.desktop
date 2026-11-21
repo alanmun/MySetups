@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=VeraCrypt: Force Dismount All Volumes (press twice)
+Exec=@HOME@/.local/bin/veracrypt-force-dismount
+Icon=veracrypt
+NoDisplay=true
+StartupNotify=false
+X-KDE-GlobalAccel-CommandShortcut=true
+X-KDE-Shortcuts=Ctrl+Shift+2

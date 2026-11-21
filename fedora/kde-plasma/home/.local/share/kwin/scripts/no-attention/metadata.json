@@ -1,0 +1,12 @@
+{
+    "KPackageStructure": "KWin/Script",
+    "X-Plasma-API": "javascript",
+    "X-Plasma-MainScript": "code/main.js",
+    "KPlugin": {
+        "Id": "no-attention",
+        "Name": "No Attention Flash",
+        "Description": "Clears the 'demands attention' state of every window, so the taskbar does not flash.",
+        "Version": "1.0",
+        "License": "MIT"
+    }
+}

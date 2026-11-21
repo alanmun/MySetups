@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=VeraCrypt: Mount Favorite Volumes
+Exec=@HOME@/.local/bin/veracrypt-mount-favorites
+Icon=veracrypt
+NoDisplay=true
+StartupNotify=false
+X-KDE-GlobalAccel-CommandShortcut=true
+X-KDE-Shortcuts=Ctrl+Shift+1

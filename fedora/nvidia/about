@@ -1,0 +1,2 @@
+NVIDIA proprietary driver (akmod, RPM Fusion) + container toolkit for Docker GPU access
+machine: NVIDIA GPU

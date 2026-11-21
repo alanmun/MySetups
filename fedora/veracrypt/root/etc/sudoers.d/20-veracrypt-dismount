@@ -1,0 +1,2 @@
+# Lets the Ctrl+Shift+2 shortcut (veracrypt-force-dismount) dismount without a password.
+@USER@ ALL=(root) NOPASSWD: /usr/local/sbin/veracrypt-dismount-all

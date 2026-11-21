@@ -1,0 +1,3 @@
+# Overrides Fedora's /etc/uv/uv.toml, which sets this to "manual". With "automatic", uv fetches a
+# managed Python when a project asks for a version the system doesn't have (Shed pins 3.12).
+python-downloads = "automatic"

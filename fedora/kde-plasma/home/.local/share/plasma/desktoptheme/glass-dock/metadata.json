@@ -1,0 +1,10 @@
+{
+    "KPlugin": {
+        "Id": "glass-dock",
+        "Name": "Glass Dock",
+        "Description": "Breeze with a rounded, glassy panel background",
+        "License": "LGPL",
+        "Version": "1.0"
+    },
+    "X-Plasma-API": "5.0"
+}

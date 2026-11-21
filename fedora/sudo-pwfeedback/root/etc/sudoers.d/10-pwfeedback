@@ -1,0 +1,2 @@
+# Show * for each typed character at sudo password prompts.
+Defaults pwfeedback

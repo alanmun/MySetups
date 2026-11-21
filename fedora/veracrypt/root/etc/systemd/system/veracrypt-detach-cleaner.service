@@ -1,0 +1,10 @@
+[Unit]
+Description=Stop programs that hold a force-dismounted VeraCrypt volume
+
+[Service]
+ExecStart=/usr/local/sbin/veracrypt-detach-cleaner
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

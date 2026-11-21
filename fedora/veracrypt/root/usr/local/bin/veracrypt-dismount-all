@@ -1,0 +1,21 @@
+#!/usr/bin/bash
+# Dismount all VeraCrypt volumes, the Windows way: first stop every program
+# that holds a volume open, then dismount. No questions. Volume contents are
+# never read.
+export HOME=/root
+vc=/usr/bin/veracrypt
+
+# Mount points of all VeraCrypt volumes (findmnt -r escapes spaces as \x20).
+mps=()
+while read -r target source; do
+    [[ $source =~ ^/dev/mapper/veracrypt[0-9]+$ ]] || continue
+    mps+=("$(printf '%b' "$target")")
+done < <(findmnt -rno TARGET,SOURCE)
+
+# -M: do nothing unless the path is a mount point.
+for mp in "${mps[@]}"; do fuser -s -k -TERM -M -m "$mp" || true; done
+((${#mps[@]})) && sleep 0.3
+for mp in "${mps[@]}"; do fuser -s -k -KILL -M -m "$mp" || true; done
+((${#mps[@]})) && sleep 0.2
+
+exec "$vc" -t --non-interactive -d --force

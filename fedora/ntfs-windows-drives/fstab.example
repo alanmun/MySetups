@@ -1,0 +1,8 @@
+# xbox720's Windows drives (by NTFS label). Create the mount points first:
+#   sudo mkdir -p /mnt/{c,d,f,k,x}
+# nofail: boot continues if a drive is missing. uid/gid=1000: owned by the first user.
+LABEL=OS          /mnt/c  ntfs3  nocase,windows_names,uid=1000,gid=1000,umask=022,nofail  0 0
+LABEL=TWOTEEBEE   /mnt/d  ntfs3  nocase,windows_names,uid=1000,gid=1000,umask=022,nofail  0 0
+LABEL=FIVEHUNNID  /mnt/f  ntfs3  nocase,windows_names,uid=1000,gid=1000,umask=022,nofail  0 0
+LABEL=TWOFIFTY    /mnt/k  ntfs3  nocase,windows_names,uid=1000,gid=1000,umask=022,nofail  0 0
+LABEL=STEAM       /mnt/x  ntfs3  nocase,windows_names,uid=1000,gid=1000,umask=022,nofail  0 0
