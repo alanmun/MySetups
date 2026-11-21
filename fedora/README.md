@@ -35,7 +35,6 @@ Related, at the repo root: `SetDefaultBrowser.kde.py` (last-used browser as the 
 `reference/` covers how xbox720 itself was built: install from WSL, disks, boot, UEFI, ComfyUI, games.
 
 ## Open items (as of 2026-11-21)
-- **Security**: `/etc/sudoers.d/90-claude-temp` (NOPASSWD: ALL) from the setup sessions is still there. Remove it: `sudo rm /etc/sudoers.d/90-claude-temp && sudo visudo -c`.
 - `gamepad-8bitdo`: xpad vs the xone blacklist, unresolved.
 - `nvidia`: import the container-toolkit GPG key.
 - Untested: the xone patch after sleep; xone-clean-stop; front-usb-bt-fix and waywallen-recall-fix across a real reboot or login; VeraCrypt logout dismount and the Ctrl+Shift+2 double press; Scratch landing on desktop 1; the Meta+X,U,S sleep shortcut.
