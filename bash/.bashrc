@@ -326,14 +326,15 @@ if $is_linux && ! $is_msys2; then
             VSCODE_IPC_HOOK_CLI="$sock" "$launcher" "$@"
             return $?
           fi
-          printf 'code: no live VS Code IPC socket found.\n' >&2
-          printf '      Open a new VS Code integrated terminal (that binds a fresh socket) and retry.\n' >&2
-          printf '      If none appear, /run/user/%s is probably missing: sudo loginctl enable-linger %s\n' "$(id -u)" "$USER" >&2
-          return 1
+          # No VS Code window is attached to WSL right now. Fall through to the
+          # Windows launcher below, which opens a new WSL remote window.
+          if [ ! -d "/run/user/$(id -u)" ]; then
+            printf 'code: note: /run/user/%s is missing, so VS Code cannot bind its socket: sudo loginctl enable-linger %s\n' "$(id -u)" "$USER" >&2
+          fi
+        else
+          "$launcher" "$@"
+          return $?
         fi
-
-        "$launcher" "$@"
-        return $?
       fi
 
       # The WSL server may not be installed yet. Force a fresh PATH lookup instead
