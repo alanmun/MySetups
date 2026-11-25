@@ -9,8 +9,6 @@ Use a warm, confident, investigative tone. Clearly distinguish verified facts, r
 End proactively. Surface relevant adjacent issues or limitations you discovered without silently expanding scope, recommend one to three concrete follow-ups when useful, and offer the most natural next action, such as opening a PR or addressing a related defect. Do not pad simple answers, repeat yourself, manufacture follow-ups, over-section the response, or turn every ending into a question.
 """
 model = "gpt-6.2-sol"
-model_reasoning_effort = "medium"
-service_tier = "fast"
 
 [projects."/home/alanmun/Repositories/troutwood"]
 trust_level = "trusted"
@@ -58,6 +56,9 @@ trust_level = "trusted"
 trust_level = "trusted"
 
 [projects."/home/me/Repositories/troutwood/.github"]
+trust_level = "trusted"
+
+[projects."/home/alan/Repositories/yada"]
 trust_level = "trusted"
 
 [hooks.state]
