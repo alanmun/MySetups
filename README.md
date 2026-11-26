@@ -156,6 +156,11 @@ separately after pulling, run `python3 t3-code/install.py` from Bash or
 run it from both Windows and the configured WSL distribution. Use `--userdata`
 to point it at a specific profile directory.
 
+`t3-code/codex-launch.json` selects the instructions and verbosity to take
+from the shared Codex profile. The installer passes them as launch overrides
+for the default Codex provider and keeps the other local provider settings.
+Codex picks up launch arguments when T3 Code starts a new provider session.
+
 The installer merges shared preference fields and appends shared shortcut
 overrides. It keeps the previous version of each changed file beside it as
 `*.mysetups.bak`. Restart T3 Code after applying changed preferences. Keep changes

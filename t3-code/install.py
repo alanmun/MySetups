@@ -3,6 +3,7 @@
 import argparse
 import json
 import os
+import re
 import shutil
 import stat
 from pathlib import Path
@@ -19,6 +20,31 @@ def merge_keybindings(current, shared):
     old_close = {"key": "mod+w", "command": "terminal.close", "when": "terminalFocus"}
     # T3 Code gives the last matching shortcut priority.
     return [binding for binding in current if binding != old_close and binding not in shared] + shared
+
+
+def configure_codex(settings, source):
+    launch = read_json(source / "codex-launch.json")
+    profile = source.parent / "codex" / f"{launch['profile']}.config.toml"
+    contents = profile.read_text(encoding="utf-8")
+    instances = settings.get("providerInstances", {}).copy()
+    instance = instances.get("codex", {"driver": "codex"}).copy()
+    config = (instance.get("config") or {}).copy()
+    args = config.get("launchArgs", "")
+    for key in launch["settings"]:
+        quoted_string = r'(?:"""\n(.*?)\n"""|("[^"\n]*"))'
+        match = re.search(rf'^{re.escape(key)}[ \t]*=[ \t]*{quoted_string}', contents, re.M | re.S)
+        if match is None:
+            raise ValueError(f"No quoted {key} setting in {profile}")
+        prompt, literal = match.groups()
+        value = literal if literal is not None else json.dumps(prompt + "\n", ensure_ascii=False)
+        # T3's argv tokenizer unescapes double quotes and backslashes. Replace
+        # our previously generated flag while keeping other local arguments.
+        args = re.sub(rf'(?:^|\s)-c "{re.escape(key)}=(?:\\.|[^"\\])*"', "", args).strip()
+        override = json.dumps(f"{key}={value}", ensure_ascii=False)
+        args = f"{args} -c {override}".strip()
+    config["launchArgs"] = args
+    instances["codex"] = {**instance, "config": config}
+    return {**settings, "providerInstances": instances}
 
 
 def write_config(path, current, updated):
@@ -60,6 +86,8 @@ def main():
             updated = merge_keybindings(current, shared)
         else:
             updated = {**current, **shared}
+        if name == "settings.json":
+            updated = configure_codex(updated, source)
         write_config(path, current, updated)
 
 

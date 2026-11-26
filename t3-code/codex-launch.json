@@ -1,0 +1,4 @@
+{
+  "profile": "claude-style",
+  "settings": ["developer_instructions", "model_verbosity"]
+}
