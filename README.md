@@ -174,6 +174,9 @@ and left Alt, then press the following key.
 | `C` | New terminal tab |
 | `X` | Close the active terminal |
 
+Ctrl+D also closes the focused terminal pane. The shared preferences turn off
+the terminal close confirmation.
+
 ## Shared Agent Skills
 Personal, non-project-specific agent skills live under `agent-skills/` and can be installed separately by running:
 

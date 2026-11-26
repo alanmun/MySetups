@@ -21,7 +21,7 @@
   "browserAutoShowFloatingPreview": true,
   "confirmQuit": "hold",
   "confirmThreadArchive": false,
-  "confirmTerminalClose": true,
+  "confirmTerminalClose": false,
   "confirmThreadDelete": true,
   "confirmThreadUnpin": false,
   "diffFilesCollapsed": true,

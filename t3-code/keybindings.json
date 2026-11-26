@@ -33,5 +33,10 @@
     "key": "ctrl+alt+x",
     "command": "terminal.close",
     "when": "terminalFocus"
+  },
+  {
+    "key": "ctrl+d",
+    "command": "terminal.close",
+    "when": "terminalFocus"
   }
 ]
