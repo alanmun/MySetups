@@ -175,7 +175,8 @@ and left Alt, then press the following key.
 | `X` | Close the active terminal |
 
 Ctrl+D also closes the focused terminal pane. The shared preferences turn off
-the terminal close confirmation.
+the terminal close confirmation. Ctrl+W goes to the shell so it can delete the
+previous word.
 
 ## Shared Agent Skills
 Personal, non-project-specific agent skills live under `agent-skills/` and can be installed separately by running:

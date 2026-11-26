@@ -15,8 +15,10 @@ def read_json(path):
 
 
 def merge_keybindings(current, shared):
+    # Remove the bundled terminal close shortcut so the shell receives Ctrl+W.
+    old_close = {"key": "mod+w", "command": "terminal.close", "when": "terminalFocus"}
     # T3 Code gives the last matching shortcut priority.
-    return [binding for binding in current if binding not in shared] + shared
+    return [binding for binding in current if binding != old_close and binding not in shared] + shared
 
 
 def write_config(path, current, updated):
