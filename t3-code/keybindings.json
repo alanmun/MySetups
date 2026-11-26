@@ -1,0 +1,37 @@
+[
+  {
+    "key": "ctrl+alt+-",
+    "command": "terminal.splitVertical",
+    "when": "terminalFocus"
+  },
+  {
+    "key": "ctrl+alt+\\",
+    "command": "terminal.split",
+    "when": "terminalFocus"
+  },
+  {
+    "key": "ctrl+alt+shift+\\",
+    "command": "terminal.split",
+    "when": "terminalFocus"
+  },
+  {
+    "key": "ctrl+alt+arrowleft",
+    "command": "terminal.previous",
+    "when": "terminalFocus"
+  },
+  {
+    "key": "ctrl+alt+arrowright",
+    "command": "terminal.next",
+    "when": "terminalFocus"
+  },
+  {
+    "key": "ctrl+alt+c",
+    "command": "terminal.new",
+    "when": "terminalFocus"
+  },
+  {
+    "key": "ctrl+alt+x",
+    "command": "terminal.close",
+    "when": "terminalFocus"
+  }
+]

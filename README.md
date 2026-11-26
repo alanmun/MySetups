@@ -3,6 +3,7 @@ Personal setup repo for:
 - AutoHotkey scripts
 - Shared Bash environment config (Debian RPi, WSL2 Ubuntu, MSYS2 UCRT64 on Windows)
 - Shared Codex config profiles
+- Shared T3 Code preferences and terminal shortcuts
 - Audited and commit-pinned Herdr plugins
 - Shared agent skills for Codex and Claude Code
 - Fedora tweaks, each with the reason it exists (`fedora/`)
@@ -145,6 +146,33 @@ bash ./install-codex-profiles.sh
 
 Current shared Codex profiles include:
 - `codex/claude-style.config.toml`
+
+## T3 Code
+
+Portable preferences and shortcut overrides live in `t3-code/`. The full
+installer applies them when it finds an existing T3 Code profile. To apply them
+separately after pulling, run `python3 t3-code/install.py` from Bash or
+`py t3-code/install.py` from Windows PowerShell. For T3 Code with a WSL backend,
+run it from both Windows and the configured WSL distribution. Use `--userdata`
+to point it at a specific profile directory.
+
+The installer merges shared preference fields and appends shared shortcut
+overrides. It keeps the previous version of each changed file beside it as
+`*.mysetups.bak`. Restart T3 Code after applying changed preferences. Keep changes
+you want to share in the JSON files in `t3-code/`. Window placement, WSL settings,
+microphone and browser profile selections, linked environments, and credentials
+live in each local profile.
+
+T3 Code accepts single keypress shortcuts. With a terminal focused, hold Ctrl
+and left Alt, then press the following key.
+
+| Key | Action |
+| --- | --- |
+| `-` | Split into stacked panes |
+| `\` or Shift+`\` (pipe) | Split into side-by-side panes |
+| Left / Right | Previous / next terminal tab |
+| `C` | New terminal tab |
+| `X` | Close the active terminal |
 
 ## Shared Agent Skills
 Personal, non-project-specific agent skills live under `agent-skills/` and can be installed separately by running:
