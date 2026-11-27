@@ -1,0 +1,124 @@
+#!/usr/bin/env bash
+# One-time setup after Plasma's first-boot wizard has created your user on
+# renascence. Run it as that user (not root), in Konsole:
+#
+#   renascence-finish-setup
+#
+# The system packages (Steam, Chrome, NVIDIA, Docker, ...) were installed when
+# the disk was built. This does what needs a real user and a running session:
+# puts MySetups in ~/Repositories, runs its installers, and installs the
+# flatpaks. Every step is safe to re-run; name steps to run only those.
+
+set -uo pipefail
+
+SEED=/opt/MySetups-seed
+REPO="$HOME/Repositories/MySetups"
+LOG="$HOME/renascence-finish-setup.log"
+# xone is left out: the Xbox Wireless Adapter is this machine's Wi-Fi dongle
+# for now (mt76x2u), and xone blacklists that driver. To switch the adapter to
+# controllers later: bash fedora/install.sh xone && renascence-finish-setup build_xone
+COMPONENTS=(packages kde-plasma browser-tweaks sudo-pwfeedback ai-killswitch waywallen-recall-fix nvidia)
+XONE_VERSION=0.5.8
+
+declare -a RESULTS=()
+
+if [ "$(id -u)" = 0 ]; then
+  echo "Run this as your normal user, not root." >&2
+  exit 1
+fi
+
+exec > >(tee -a "$LOG") 2>&1
+echo "=== renascence-finish-setup $(date) user=$USER ==="
+
+ONLY=" $* "
+step() {
+  local label="$1" fn="$2"
+  if [ "$ONLY" != "  " ]; then
+    case "$ONLY" in *" $fn "*) ;; *) return 0 ;; esac
+  fi
+  echo
+  echo "--- $label"
+  if "$fn"; then RESULTS+=("OK    $label"); else RESULTS+=("FAIL  $label"); fi
+}
+
+place_repo() {
+  if [ -d "$REPO/.git" ]; then
+    echo "MySetups already at $REPO."
+  elif [ -d "$SEED/.git" ]; then
+    mkdir -p "$(dirname "$REPO")"
+    cp -a "$SEED" "$REPO" || return 1
+  else
+    mkdir -p "$(dirname "$REPO")"
+    git clone https://github.com/alanmun/MySetups "$REPO" || return 1
+  fi
+  # Pick up anything pushed since the disk was built. Not fatal when offline.
+  git -C "$REPO" pull --ff-only || echo "(could not pull; using the seeded copy)"
+  return 0
+}
+
+run_mysetups() {
+  export PATH="$HOME/.local/bin:$PATH"
+  bash "$REPO/install.sh"
+}
+
+run_fedora_components() {
+  sudo -v || return 1
+  # One at a time: install.sh stops at the first error, and a flaky download in
+  # "packages" must not skip everything after it (it did on 2026-11-23).
+  local c rc=0
+  for c in "${COMPONENTS[@]}"; do
+    if ! bash "$REPO/fedora/install.sh" "$c"; then
+      echo "*** component failed: $c"
+      rc=1
+    fi
+  done
+  return $rc
+}
+
+# The xone driver itself (the "xone" component only has the blacklist and the
+# clean-stop unit). Steps from fedora/xone/README.md.
+build_xone() {
+  if dkms status 2>/dev/null | grep -q "^xone/$XONE_VERSION.*installed"; then
+    echo "xone $XONE_VERSION already built: $(dkms status | grep '^xone')"
+    return 0
+  fi
+  local src="$HOME/Repositories/xone"
+  sudo dnf install -y dkms bsdtar "kernel-devel-$(uname -r)" || return 1
+  [ -d "$src/.git" ] || git clone https://github.com/dlundqvist/xone "$src" || return 1
+  git -C "$src" checkout -q "v$XONE_VERSION" || return 1
+  (cd "$src" && sudo ./install.sh) || return 1
+  (cd "$src" && sudo install/firmware.sh --skip-disclaimer) || return 1
+  if sudo patch -d "/usr/src/xone-$XONE_VERSION" -p1 --dry-run -s < "$REPO/fedora/xone/xone-stale-client-fix.patch" >/dev/null 2>&1; then
+    sudo patch -d "/usr/src/xone-$XONE_VERSION" -p1 -b < "$REPO/fedora/xone/xone-stale-client-fix.patch" || return 1
+    sudo dkms build "xone/$XONE_VERSION" --force && sudo dkms install "xone/$XONE_VERSION" --force || return 1
+  else
+    echo "xone-stale-client-fix.patch does not apply cleanly; left unpatched."
+  fi
+  dkms status | grep '^xone'
+}
+
+check_nvidia() {
+  if modinfo -F version nvidia >/dev/null 2>&1; then
+    echo "NVIDIA module built: $(modinfo -F version nvidia)"
+    lsmod | grep -q '^nvidia ' || echo "Not loaded yet; reboot to start using it."
+    return 0
+  fi
+  echo "NVIDIA module not built yet. akmods builds it in the background (a few"
+  echo "minutes); check with: modinfo -F version nvidia   then reboot."
+  sudo akmods --force || return 1
+}
+
+step "MySetups into $REPO" place_repo
+step "MySetups install.sh (bash config, Codex profiles, agent skills)" run_mysetups
+step "Fedora components: ${COMPONENTS[*]}" run_fedora_components
+[ "$ONLY" != "  " ] && step "xone DKMS driver $XONE_VERSION" build_xone   # only when named
+step "NVIDIA kernel module" check_nvidia
+
+echo
+echo "=== Summary ==="
+printf '%s\n' "${RESULTS[@]}"
+echo
+echo "Log: $LOG"
+echo "Still manual (see fedora/reference/renascence-install.md): waywallen KDE"
+echo "plugin, Mullvad login, dock/shortcuts/activities, SetDefaultBrowser.kde.py."
+echo "Log out and back in (or reboot) so group membership and KDE settings apply."

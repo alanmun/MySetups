@@ -32,7 +32,7 @@ Each folder's `README.md` has the why, what was tried, and the status.
 
 Related, at the repo root: `SetDefaultBrowser.kde.py` (last-used browser as the default) and `RoyalKludgeRKS70.kde.sh` (keyboard shortcuts). The Fedora-specific `.bashrc` branches are in `bash/.bashrc`: Ctrl+V via wl-paste, the `npm()` wrapper that fixes AWS SSO's xdg-open on KDE 6, and the JAVA_HOME lookup.
 
-`reference/` covers how xbox720 itself was built: install from WSL, disks, boot, UEFI, ComfyUI, games.
+`reference/` covers how xbox720 itself was built: install from WSL, disks, boot, UEFI, ComfyUI, games. `reference/renascence-install.md` does the same for the backup desktop `renascence` (external USB HDD, built 2026-11-23), with `reference/renascence-finish-setup` as its first-login script.
 
 ## Open items (as of 2026-11-21)
 - `gamepad-8bitdo`: xpad vs the xone blacklist, unresolved.
