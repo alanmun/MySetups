@@ -14,6 +14,7 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 bash "$script_dir/install-bash-folder.sh"
 bash "$script_dir/install-codex-profiles.sh"
+bash "$script_dir/install-claude-persona.sh"
 t3_home="${T3_HOME:-$HOME/.t3}"
 if [ -d "$t3_home/userdata" ]; then
   if [[ "$(uname -s)" == MSYS* || "$(uname -s)" == MINGW* ]] && command -v py >/dev/null 2>&1; then
