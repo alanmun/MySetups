@@ -8,6 +8,10 @@ case $- in
   *) return ;;
 esac
 
+if [[ ${TERM_PROGRAM:-} == t3code && ${MSYSTEM:-} == UCRT64 ]]; then
+  bind -f "$HOME/.config/t3-code/shifted-keys.inputrc"
+fi
+
 # -------------------------
 # Environment detection
 # -------------------------
