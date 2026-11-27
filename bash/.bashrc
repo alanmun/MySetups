@@ -51,6 +51,9 @@ unset history_sync_command
 
 export UV_ENV_FILE=".env"
 export LESS='-R'
+# 't3 serve' from a shell publishes itself over Tailscale Serve, like the desktop
+# app does through t3-code/desktop-settings.json. Without Tailscale it only warns.
+export T3CODE_TAILSCALE_SERVE=1
 
 alias withenv='dotenv -e .env --'
 alias uvshell='source .venv/bin/activate'

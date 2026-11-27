@@ -181,14 +181,39 @@ On a machine where Tailscale is missing or logged out, T3 Code logs a warning
 and starts as usual. It publishes itself on the next launch after Tailscale is
 set up. Per machine:
 
-1. Install Tailscale and sign in to the tailnet.
-2. Once per tailnet, enable HTTPS certificates at
-   <https://login.tailscale.com/admin/dns>.
-3. Quit T3 Code, run the installer, and start T3 Code again. The running app
-   rewrites `desktop-settings.json`, so a change made while it is open is lost.
+1. Run `bash ./install-tailscale.sh --install`. It installs Tailscale when
+   missing (winget on Windows, Tailscale's install script on Linux).
+2. Sign in: the tray icon on Windows, `sudo tailscale up` on Linux.
+3. Run `bash ./install-tailscale.sh` again. It turns shields-up off and
+   auto-update on. On Linux it also makes you the Tailscale operator (one sudo
+   prompt), which T3 Code needs to run `tailscale serve` as your user. It ends
+   by printing this machine's T3 Code URL.
+4. Quit T3 Code, run `bash ./install.sh` (or `t3-code/install.py`), and start
+   T3 Code again. The running app rewrites `desktop-settings.json`, so a change
+   made while it is open is lost.
+5. Pair each phone or laptop once from Settings > Connections.
 
-The setting applies to the desktop app. A headless server takes the same option
-as `t3 serve --tailscale-serve` or `T3CODE_TAILSCALE_SERVE=1`.
+`install.sh` runs `install-tailscale.sh --check`, which only reports what is
+missing and never asks for sudo.
+
+The desktop setting applies to the desktop app. For `t3 serve` started from a
+shell, `bash/.bashrc` exports `T3CODE_TAILSCALE_SERVE=1`, which does the same.
+A `t3 service` background service does not read `.bashrc`; that case is not
+covered here.
+
+These live in the Tailscale admin console and are set by hand, once per tailnet
+unless noted:
+
+- HTTPS certificates on, at <https://login.tailscale.com/admin/dns>. T3 Code
+  refuses to publish without them.
+- Key expiry disabled for each always-on PC (Machines > `...` > Disable key
+  expiry). Otherwise it drops off the tailnet after 180 days. Leave expiry on
+  for phones.
+- Funnel off. It would put T3 Code on the public internet.
+- No Tailscale SSH, exit nodes, subnet routes, shared machines or invited users.
+
+Outside Tailscale: keep two-factor on for the account used to sign in, and stop
+the PC from sleeping while plugged in, since a sleeping PC is unreachable.
 
 T3 Code accepts single keypress shortcuts. With a terminal focused, hold Ctrl
 and left Alt, then press the following key.

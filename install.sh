@@ -22,6 +22,7 @@ if [ -d "$t3_home/userdata" ]; then
     python3 "$script_dir/t3-code/install.py" --userdata "$t3_home/userdata"
   fi
 fi
+bash "$script_dir/install-tailscale.sh" --check
 if command -v herdr >/dev/null 2>&1; then
   if herdr server reload-config >/dev/null 2>&1; then
     echo "Reloaded Herdr config."
