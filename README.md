@@ -164,9 +164,31 @@ Codex picks up launch arguments when T3 Code starts a new provider session.
 The installer merges shared preference fields and appends shared shortcut
 overrides. It keeps the previous version of each changed file beside it as
 `*.mysetups.bak`. Restart T3 Code after applying changed preferences. Keep changes
-you want to share in the JSON files in `t3-code/`. Window placement, WSL settings,
+you want to share in the JSON files in `t3-code/`. From `desktop-settings.json`
+only the Tailscale option is shared. Window placement, WSL settings,
 microphone and browser profile selections, linked environments, and credentials
 live in each local profile.
+
+### Remote access over Tailscale
+
+`t3-code/desktop-settings.json` turns on T3 Code's Tailscale Serve option. The
+desktop app keeps its server on `127.0.0.1` and asks Tailscale to publish it at
+`https://<machine>.<tailnet>.ts.net`, reachable only from devices signed in to
+the same tailnet. T3 Connect and LAN access stay off. Each device still pairs
+once with a code from Settings > Connections or `t3 pair --tailscale`.
+
+On a machine where Tailscale is missing or logged out, T3 Code logs a warning
+and starts as usual. It publishes itself on the next launch after Tailscale is
+set up. Per machine:
+
+1. Install Tailscale and sign in to the tailnet.
+2. Once per tailnet, enable HTTPS certificates at
+   <https://login.tailscale.com/admin/dns>.
+3. Quit T3 Code, run the installer, and start T3 Code again. The running app
+   rewrites `desktop-settings.json`, so a change made while it is open is lost.
+
+The setting applies to the desktop app. A headless server takes the same option
+as `t3 serve --tailscale-serve` or `T3CODE_TAILSCALE_SERVE=1`.
 
 T3 Code accepts single keypress shortcuts. With a terminal focused, hold Ctrl
 and left Alt, then press the following key.

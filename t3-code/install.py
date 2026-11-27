@@ -78,7 +78,9 @@ def main():
         return
 
     source = Path(__file__).resolve().parent
-    for name in ("keybindings.json", "client-settings.json", "settings.json"):
+    # desktop-settings.json turns on Tailscale Serve. T3 Code logs a warning
+    # and starts normally on a machine where Tailscale is missing or logged out.
+    for name in ("keybindings.json", "client-settings.json", "settings.json", "desktop-settings.json"):
         path = target / name
         shared = read_json(source / name)
         current = read_json(path) if path.exists() else type(shared)()
